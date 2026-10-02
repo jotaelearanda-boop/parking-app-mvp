@@ -53,7 +53,11 @@ r.post('/reservar/:plazaId', async (req, res) => {
       `update plazas_activas set estado='reservada'
         where id=$1 and estado='disponible' and expira_at > now() and seller_id <> $2
         returning id, seller_id, precio_cents`, [req.params.plazaId, req.user.id]);
-    if (!rows[0]) { await client.query('rollback'); return res.status(409).json({ error: 'Plaza no disponible' }); }
+    if (!rows[0]) {
+      await client.query('rollback');
+      const { rows: d } = await query('select seller_id from plazas_activas where id=$1', [req.params.plazaId]);
+      return res.status(409).json({ error: d[0]?.seller_id === req.user.id ? 'Esta plaza es tuya: no puedes reservarla' : 'Esta plaza ya no está disponible' });
+    }
     const p = rows[0];
     const comision = Math.round((p.precio_cents * env.comisionPct) / 100);
     const tx = (await client.query(
@@ -64,7 +68,8 @@ r.post('/reservar/:plazaId', async (req, res) => {
     // ¿Alcanza el saldo? Se descuenta y la plaza queda pagada al instante (sin pasar por Stripe, sin tarifa).
     await client.query('select 1 from users where id=$1 for update', [req.user.id]);
     const saldo = (await client.query('select saldo_cents from users where id=$1', [req.user.id])).rows[0].saldo_cents;
-    if (saldo >= p.precio_cents) {
+    // Se paga con saldo si alcanza, salvo que el comprador pida expresamente pagar con tarjeta (usar_saldo=false).
+    if (saldo >= p.precio_cents && req.body?.usar_saldo !== false) {
       await moverSaldo(client, req.user.id, 'pago_plaza', -p.precio_cents, { transaccionId: tx.id });
       await client.query("update transacciones set estado='en_escrow', pago_con_saldo=true where id=$1", [tx.id]);
       tx.estado = 'en_escrow'; tx.pago_con_saldo = true;
