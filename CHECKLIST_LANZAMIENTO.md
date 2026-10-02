@@ -19,14 +19,16 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 - [ ] Comprobar copias de seguridad en Supabase.
 
 ## Pagos (Stripe)
-- [ ] Registrar el **webhook de producción** en Stripe (endpoint de Railway) y poner `STRIPE_WEBHOOK_SECRET` en Railway.
+- [x] Webhook de producción registrado en Stripe (endpoint clásico/snapshot `we_1UM8WE…`) y `STRIPE_WEBHOOK_SECRET` en Railway. Probado con un pago real en modo test.
+- [ ] Borrar el destino de webhook sobrante creado por el asistente (`we_1UM8NT…`, estilo "Resumen"/thin, no lo usa el servidor).
+- [ ] Al pasar a modo **live**, repetir: crear un endpoint nuevo en modo live y su `whsec_` propio.
 - [ ] Verificar el dominio de Vercel en Stripe para **Apple Pay** y activar Google Pay en Ajustes → Métodos de pago.
 - [ ] Probar un pago, una recarga, una disputa y una retirada completos en producción (modo test).
 - [ ] Decidir cuándo pasar a modo **live** (claves `sk_live_` / `pk_live_`, Connect en live) — requiere verificar la cuenta de Stripe.
 - [ ] Probar la retirada de saldo con el alta (KYC) de un vendedor de prueba.
 
 ## Google Maps
-- [ ] Añadir el dominio de Vercel a las restricciones HTTP de la clave de Maps (y quitar `localhost` si ya no hace falta).
+- [x] Dominio de Vercel añadido a la clave de Maps. Pendiente: quitar `localhost` de las restricciones antes del lanzamiento público.
 
 ## Legal y privacidad
 - [ ] **Consulta con abogado**: legalidad de vender/comprar plazas en vía pública en Alicante, saldo interno (dinero electrónico) y comisión.
@@ -37,7 +39,8 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 ## Infraestructura
 - [ ] Servidor Railway en región **Europa** (ahora en US West) — latencia con Supabase (Irlanda).
 - [ ] Revisar el plan de Railway (el trial dura 30 días / 5 $) y el de Supabase.
-- [ ] `CLIENT_ORIGIN` en Railway = URL de Vercel (CORS).
+- [x] `CLIENT_ORIGIN` en Railway = URL de Vercel (CORS).
+- [ ] Dominio propio para la app (ahora `parking-app-mvp-beryl.vercel.app`) y actualizar `CLIENT_ORIGIN`, Maps y Stripe.
 - [ ] Revisar los límites de la geolocalización y el uso de la API de Google Maps.
 - [ ] Monitorización de errores (p. ej. Sentry) y alertas del servidor.
 
