@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import authRoutes from './routes/auth.js';
+import transaccionesRoutes from './routes/transacciones.js';
+import { attachWs } from './ws.js';
 import plazasRoutes, { UPLOAD_DIR } from './routes/plazas.js';
 
 export const app = express();
@@ -15,6 +17,7 @@ app.use('/uploads', express.static(UPLOAD_DIR)); // TODO: restringir foto matrí
 app.get('/health', (_q, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: 20 }), authRoutes);
 app.use('/api/plazas', plazasRoutes);
+app.use('/api/transacciones', transaccionesRoutes);
 
 app.use((err, _q, res, _n) => {
   console.error(err);
@@ -22,5 +25,6 @@ app.use((err, _q, res, _n) => {
 });
 
 if (process.argv[1]?.endsWith('index.js')) {
-  app.listen(env.port, () => console.log(`API en :${env.port}`));
+  const server = app.listen(env.port, () => console.log(`API en :${env.port}`));
+  attachWs(server);
 }
