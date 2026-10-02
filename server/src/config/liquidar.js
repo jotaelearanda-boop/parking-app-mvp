@@ -3,6 +3,7 @@ import { pool, query } from './db.js';
 import { stripe } from './stripe.js';
 import { moverSaldo } from './saldo.js';
 import { notify } from '../ws.js';
+import { evento } from './audit.js';
 
 // en_escrow|disputada -> liberada. Abona al vendedor (monto - comisión) y cierra la plaza.
 export async function liberarAlVendedor(txId, { porSalida = false } = {}) {
@@ -19,6 +20,7 @@ export async function liberarAlVendedor(txId, { porSalida = false } = {}) {
     await c.query("update plazas_activas set estado='completada' where id=$1", [t.plaza_id]);
     await c.query("update disputas set estado='rechazada' where transaccion_id=$1 and estado='abierta'", [t.id]);
     await c.query('commit');
+    evento('pago_liberado_al_vendedor', { userId: t.vendedor_id, data: { transaccion: t.id, neto: t.monto_cents - t.comision_cents, comision: t.comision_cents } });
     notify(t.comprador_id, 'plaza_lista', { transaccion_id: t.id });
     return t;
   } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
@@ -42,6 +44,7 @@ export async function reembolsar(txId) {
     await c.query("update plazas_activas set estado='cancelada' where id=$1", [t.plaza_id]);
     await c.query("update disputas set estado='reembolsada' where transaccion_id=$1 and estado='abierta'", [t.id]);
     await c.query('commit');
+    evento('reembolso', { userId: t.comprador_id, data: { transaccion: t.id, importe: t.monto_cents, via: t.pago_con_saldo ? 'saldo' : 'tarjeta' } });
     notify(t.comprador_id, 'reembolsado', { transaccion_id: t.id });
     notify(t.vendedor_id, 'reembolsado', { transaccion_id: t.id });
     return t;

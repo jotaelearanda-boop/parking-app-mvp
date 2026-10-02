@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useToast } from '../components/Toast.jsx';
-import { api } from '../services/api.js';
+import { useToast } from './Toast.jsx';
+import { api } from './api.js';
 
 const eur = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const fecha = (d) => new Date(d).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
@@ -25,7 +25,7 @@ function Resumen() {
 }
 
 // ------------------------------------------------------------------ Usuarios
-function Usuarios() {
+function Usuarios({ can }) {
   const aviso = useToast();
   const [q, setQ] = useState('');
   const [lista, setLista] = useState([]);
@@ -66,12 +66,12 @@ function Usuarios() {
                     const motivo = prompt('Motivo (obligatorio):'); if (!motivo) return;
                     accion(() => api.adminSuspender(u.id, dias, motivo), 'Usuario suspendido');
                   }}>Suspender…</button>}
-              <button className="rounded-lg border px-3 py-2" onClick={() => {
+              {can('ajuste_saldo') && <button className="rounded-lg border px-3 py-2" onClick={() => {
                 const eurTxt = prompt('Importe del ajuste en € (negativo para restar, máx. ±50):', '1'); if (!eurTxt) return;
                 const cents = Math.round(Number(eurTxt.replace(',', '.')) * 100); if (!cents) return;
                 const motivo = prompt('Motivo (obligatorio):'); if (!motivo) return;
                 accion(() => api.adminAjuste(u.id, cents, motivo), 'Saldo ajustado');
-              }}>Ajustar saldo…</button>
+              }}>Ajustar saldo…</button>}
             </div>)}
         </div>
 
@@ -202,35 +202,96 @@ function Zonas() {
     </div>);
 }
 
-// ------------------------------------------------------------------ Auditoría
-function Auditoria() {
+// ------------------------------------------------------------------ Auditoría (acciones del equipo)
+export function Auditoria() {
   const [l, setL] = useState([]);
-  useEffect(() => { api.adminLog().then((r) => setL(r.log)).catch(() => {}); }, []);
+  const [http, setHttp] = useState(false);
+  useEffect(() => { api.adminLog(http).then((r) => setL(r.log)).catch(() => {}); }, [http]);
   return (
-    <div className="overflow-x-auto rounded-xl border bg-white">
-      <table className="w-full min-w-[640px] text-left text-sm">
-        <thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="p-2">Fecha</th><th>Admin</th><th>Acción</th><th>Objetivo</th><th>Detalle</th></tr></thead>
-        <tbody>{l.map((x) => (
-          <tr key={x.id} className="border-t align-top"><td className="p-2">{fecha(x.created_at)}</td><td>{x.admin}</td><td>{x.accion}</td>
-            <td className="font-mono text-xs">{x.objetivo_tipo} {x.objetivo_id?.slice(0, 8)}</td><td className="font-mono text-xs">{x.detalle ? JSON.stringify(x.detalle) : ''}</td></tr>))}</tbody>
-      </table>
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={http} onChange={(e) => setHttp(e.target.checked)} /> Incluir todas las peticiones (consultas y navegación)</label>
+      <p className="text-xs text-gray-500">Registro inmutable: no se puede editar ni borrar.</p>
+      <div className="overflow-x-auto rounded-xl border bg-white">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="p-2">Fecha</th><th>Quién</th><th>Acción</th><th>Objetivo</th><th>IP</th><th>Detalle</th></tr></thead>
+          <tbody>{l.map((x) => (
+            <tr key={x.id} className="border-t align-top"><td className="p-2 whitespace-nowrap">{fecha(x.created_at)}</td><td>{x.admin}</td><td>{x.accion}</td>
+              <td className="font-mono text-xs">{x.objetivo_tipo} {x.objetivo_id?.slice(0, 8)}</td><td className="font-mono text-xs">{x.ip}</td><td className="font-mono text-xs">{x.detalle ? JSON.stringify(x.detalle) : ''}</td></tr>))}</tbody>
+        </table>
+      </div>
+    </div>);
+}
+
+// ------------------------------------------------------------------ Eventos del sistema
+export function Eventos() {
+  const [tipo, setTipo] = useState('');
+  const [l, setL] = useState([]);
+  useEffect(() => { api.adminEventos(tipo).then((r) => setL(r.eventos)).catch(() => {}); }, [tipo]);
+  const TIPOS = ['registro', 'login_ok', 'login_fail', 'bo_login', 'consentimiento', 'reserva', 'pago_confirmado', 'recarga_saldo', 'pago_liberado', 'salida_confirmada', 'disputa', 'reembolso', 'retirada', 'stripe_pago_fallido'];
+  return (
+    <div className="space-y-2">
+      <select className="rounded-lg border p-2" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+        <option value="">Todos los eventos</option>{TIPOS.map((t) => <option key={t}>{t}</option>)}
+      </select>
+      <div className="overflow-x-auto rounded-xl border bg-white">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="p-2">Fecha</th><th>Evento</th><th>Usuario</th><th>IP</th><th>Detalle</th></tr></thead>
+          <tbody>{l.map((x) => (
+            <tr key={x.id} className="border-t align-top"><td className="p-2 whitespace-nowrap">{fecha(x.created_at)}</td>
+              <td><Etiqueta color={x.tipo.includes('fail') || x.tipo.includes('fallido') ? 'bg-red-100 text-red-800' : ''}>{x.tipo}</Etiqueta></td>
+              <td>{x.email}</td><td className="font-mono text-xs">{x.ip}</td><td className="font-mono text-xs">{x.payload ? JSON.stringify(x.payload) : ''}</td></tr>))}</tbody>
+        </table>
+      </div>
+    </div>);
+}
+
+// ------------------------------------------------------------------ Equipo (roles)
+export function Equipo({ yo }) {
+  const aviso = useToast();
+  const [eq, setEq] = useState([]);
+  const [f, setF] = useState({ email: '', rol: 'gestor' });
+  const cargar = useCallback(() => api.adminEquipo().then((r) => setEq(r.equipo)).catch(() => {}), []);
+  useEffect(() => { cargar(); }, [cargar]);
+  const cambiar = (email, rol) => api.adminCambiarRol(email, rol).then(() => { aviso('Rol actualizado', 'ok'); cargar(); }).catch((e) => aviso(e.message, 'error'));
+  return (
+    <div className="space-y-4">
+      <p className="rounded-lg bg-blue-50 p-3 text-sm">
+        <b>Superadmin:</b> todo (saldos, zonas, auditoría, equipo). <b>Gestor:</b> ver usuarios y transacciones, resolver reclamaciones y suspender.
+        La persona debe tener antes una cuenta en la app. Los clientes nunca ven este backoffice.
+      </p>
+      <form onSubmit={(e) => { e.preventDefault(); cambiar(f.email, f.rol); setF({ ...f, email: '' }); }} className="flex flex-wrap gap-2 rounded-xl border bg-white p-3">
+        <input type="email" required className="min-w-[220px] flex-1 rounded border p-2" placeholder="Email de la persona" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+        <select className="rounded border p-2" value={f.rol} onChange={(e) => setF({ ...f, rol: e.target.value })}>
+          <option value="gestor">Gestor</option><option value="superadmin">Superadmin</option><option value="usuario">Quitar acceso</option>
+        </select>
+        <button className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white">Aplicar</button>
+      </form>
+      {eq.map((m) => (
+        <div key={m.id} className="flex items-center gap-3 rounded-xl border bg-white p-3">
+          <div className="flex-1"><b>{m.name}</b> <Etiqueta color={m.rol === 'superadmin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}>{m.rol}</Etiqueta><p className="text-sm text-gray-500">{m.email}</p></div>
+          {m.id !== yo.id && <button className="rounded border border-red-300 px-3 py-1 text-red-700" onClick={() => confirm(`¿Quitar el acceso a ${m.email}?`) && cambiar(m.email, 'usuario')}>Quitar acceso</button>}
+        </div>))}
     </div>);
 }
 
 // ------------------------------------------------------------------ Contenedor
-const TABS = [['resumen', 'Resumen', Resumen], ['usuarios', 'Usuarios', Usuarios], ['reclamaciones', 'Reclamaciones', Reclamaciones],
-  ['transacciones', 'Transacciones', Transacciones], ['zonas', 'Zonas', Zonas], ['auditoria', 'Auditoría', Auditoria]];
+const TABS = [
+  ['resumen', 'Resumen', Resumen, 'ver'], ['usuarios', 'Usuarios', Usuarios, 'ver'], ['reclamaciones', 'Reclamaciones', Reclamaciones, 'ver'],
+  ['transacciones', 'Transacciones', Transacciones, 'ver'], ['zonas', 'Zonas', Zonas, 'zonas'],
+  ['auditoria', 'Auditoría', Auditoria, 'auditoria'], ['eventos', 'Eventos', Eventos, 'auditoria'], ['equipo', 'Equipo', Equipo, 'equipo'],
+];
 
-export default function Admin() {
+export default function Panel({ yo }) {
+  const visibles = TABS.filter((t) => yo.permisos.includes(t[3]));
   const [tab, setTab] = useState('resumen');
-  const Vista = TABS.find((t) => t[0] === tab)[2];
+  const Vista = (visibles.find((t) => t[0] === tab) ?? visibles[0])[2];
+  const can = (p) => yo.permisos.includes(p);
   return (
-    <div className="space-y-3 p-4">
-      <h1 className="text-xl font-bold">Backoffice</h1>
+    <div className="space-y-3">
       <div className="flex gap-1 overflow-x-auto border-b">
-        {TABS.map(([id, nombre]) => (
+        {visibles.map(([id, nombre]) => (
           <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap px-3 py-2 font-semibold ${tab === id ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}>{nombre}</button>))}
       </div>
-      <Vista />
+      <Vista yo={yo} can={can} />
     </div>);
 }

@@ -5,6 +5,7 @@ import { stripe, requireStripe } from '../config/stripe.js';
 import { requireAuth } from '../middleware/auth.js';
 import { moverSaldo, SALDO_MAX_CENTS, RECARGA_MIN_CENTS, RETIRADA_MIN_CENTS } from '../config/saldo.js';
 import { vendedorListo } from './stripe.js';
+import { evento } from '../config/audit.js';
 
 const r = Router();
 r.use(requireAuth);
@@ -50,6 +51,7 @@ r.post('/retirar', requireStripe, async (req, res) => {
       amount: saldo_cents, currency: 'eur', destination: stripe_account_id, metadata: { ref },
     }, { idempotencyKey: ref });
     await client.query('commit');
+    evento('retirada_saldo', { userId: req.user.id, ip: req.ip, data: { importe: saldo_cents } });
     res.json({ retirado_cents: saldo_cents });
   } catch (e) {
     await client.query('rollback');

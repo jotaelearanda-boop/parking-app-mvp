@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { query } from '../config/db.js';
+import { evento } from '../config/audit.js';
 import { signToken, requireAuth } from '../middleware/auth.js';
 
 const r = Router();
@@ -36,6 +37,7 @@ r.post('/registro', async (req, res) => {
        values (lower($1),$2,$3,$4,$5,$6,$7, now(), $8) returning *`,
       [email, phone, name, hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula, POLITICAS_VERSION]);
     // TODO semana 3: enviar código de verificación por email/SMS (proveedor por decidir)
+    evento('registro', { userId: rows[0].id, ip: req.ip, data: { politicas: POLITICAS_VERSION } });
     res.status(201).json({ token: signToken(rows[0]), user: publico(rows[0]) });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Email ya registrado' });
@@ -47,8 +49,11 @@ r.post('/login', async (req, res) => {
   const { email, password } = req.body ?? {};
   const { rows } = await query('select * from users where email=lower($1)', [String(email ?? '')]);
   const u = rows[0];
-  if (!u || !(await bcrypt.compare(String(password ?? ''), u.password_hash)))
+  if (!u || !(await bcrypt.compare(String(password ?? ''), u.password_hash))) {
+    evento('login_fail', { userId: u?.id ?? null, ip: req.ip, data: { email: String(email ?? '').toLowerCase() } });
     return res.status(401).json({ error: 'Credenciales incorrectas' });
+  }
+  evento('login_ok', { userId: u.id, ip: req.ip });
   res.json({ token: signToken(u), user: publico(u) });
 });
 
@@ -65,6 +70,7 @@ r.put('/vehiculo', requireAuth, async (req, res) => {
 r.post('/consentimiento', requireAuth, async (req, res) => {
   if (req.body?.acepta_politicas !== true) return res.status(400).json({ error: 'Debes aceptar para continuar' });
   const { rows } = await query('update users set consent_at=now(), consent_version=$1 where id=$2 returning *', [POLITICAS_VERSION, req.user.id]);
+  evento('consentimiento', { userId: req.user.id, ip: req.ip, data: { version: POLITICAS_VERSION } });
   res.json({ user: publico(rows[0]) });
 });
 

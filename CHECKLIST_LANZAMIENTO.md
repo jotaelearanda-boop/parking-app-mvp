@@ -39,8 +39,14 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 - [ ] **Riesgo de negocio:** la ampliación de la ORA incluye Benalúa y Benalúa Sur. Comprobar si Aloná y García Andreu pasarán a zona azul/naranja y cuándo.
 - [ ] Cargar todas las zonas azules/naranjas del piloto en el backoffice antes de abrir el beta.
 
-## Backoffice
-- [ ] Marcar como admin solo las cuentas reales de gestión (`is_admin`). Cada consulta de datos personales queda en la pestaña Auditoría.
+## Backoffice (aplicación aparte, solo equipo)
+- [x] Backoffice separado de la app de clientes (carpeta `backoffice/`, proyecto Vercel propio, login propio y token con `aud: backoffice`).
+- [x] Roles: `superadmin` (todo) y `gestor` (ver, reclamaciones, suspender). Se asignan en Backoffice → Equipo.
+- [x] Auditoría inmutable: `admin_log` (acciones y peticiones) y `eventos` (registros, accesos, pagos, reembolsos, retiradas...). Triggers impiden UPDATE/DELETE.
+- [ ] Activar **2FA** en la cuenta superadmin del backoffice (hoy solo email + contraseña) y valorar restringir por IP o poner el backoffice detrás de Vercel Authentication.
+- [ ] Contraseña larga y única para la cuenta superadmin.
+- [ ] Antes de lanzar, vaciar datos de prueba: `truncate admin_log, eventos` y luego borrar usuarios/transacciones de prueba (los triggers no bloquean TRUNCATE).
+- [ ] Definir cuánto tiempo se conservan `admin_log` y `eventos` (RGPD) y cómo se exportan para una auditoría.
 
 ## Legal y privacidad
 - [ ] **Consulta con abogado**: legalidad de vender/comprar plazas en vía pública en Alicante, saldo interno (dinero electrónico) y comisión.

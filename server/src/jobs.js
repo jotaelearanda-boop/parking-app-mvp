@@ -1,6 +1,7 @@
 // Tareas periódicas (cada minuto). Aptas para una sola instancia de servidor en el MVP.
 import { query } from './config/db.js';
 import { reembolsar } from './config/liquidar.js';
+import { evento } from './config/audit.js';
 
 async function tick() {
   // 1. Plazas disponibles que han caducado.
@@ -14,7 +15,7 @@ async function tick() {
   // 3. Disputas abiertas más de 24 h sin resolver: reembolso automático.
   const { rows: disp } = await query(
     "select transaccion_id from disputas where estado='abierta' and created_at < now() - interval '24 hours'");
-  for (const d of disp) await reembolsar(d.transaccion_id);
+  for (const d of disp) { await reembolsar(d.transaccion_id); evento('reembolso_automatico_24h', { data: { transaccion: d.transaccion_id } }); }
 
   // 4. RGPD: borrar ubicación 1 h después de cerrar (o 1 h tras caducar si nunca hubo compra).
   const { rows: cand } = await query(

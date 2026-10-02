@@ -9,13 +9,14 @@ import { attachWs } from './ws.js';
 import { router as stripeRoutes, webhook } from './routes/stripe.js';
 import saldoRoutes from './routes/saldo.js';
 import adminRoutes from './routes/admin.js';
+import backofficeRoutes from './routes/backoffice.js';
 import { iniciarJobs } from './jobs.js';
 import plazasRoutes from './routes/plazas.js';
 
 export const app = express();
 app.set('trust proxy', 1); // detrás del proxy de Railway: IP real para el rate-limit
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: env.clientOrigin }));
+app.use(cors({ origin: [env.clientOrigin, ...env.adminOrigins] }));
 // El webhook de Stripe necesita el cuerpo crudo: va ANTES de express.json.
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), webhook);
 app.use(express.json({ limit: '100kb' }));
@@ -24,6 +25,7 @@ app.get('/health', (_q, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: 20 }), authRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/saldo', saldoRoutes);
+app.use('/api/backoffice', backofficeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/plazas', plazasRoutes);
 app.use('/api/transacciones', transaccionesRoutes);

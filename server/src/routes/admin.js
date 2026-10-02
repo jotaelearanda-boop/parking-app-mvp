@@ -1,17 +1,27 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../config/db.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { permiso, requireStaff } from '../middleware/staff.js';
 import { liberarAlVendedor, reembolsar } from '../config/liquidar.js';
 import { pool } from '../config/db.js';
 import { moverSaldo } from '../config/saldo.js';
 
 const r = Router();
-r.use(requireAuth, requireAdmin);
+r.use(requireStaff);
+
+// Cada petición al backoffice queda registrada (quién, qué, desde dónde y con qué resultado).
+r.use((req, res, next) => {
+  res.on('finish', () => {
+    query('insert into admin_log(admin_id, accion, objetivo_tipo, objetivo_id, detalle, ip, user_agent) values ($1,$2,$3,$4,$5,$6,$7)',
+      [req.user.id, 'http', 'peticion', null, { metodo: req.method, ruta: req.originalUrl.split('?')[0], status: res.statusCode }, req.ip, String(req.headers['user-agent'] ?? '').slice(0, 200)]).catch(() => {});
+  });
+  next();
+});
 
 // Auditoría: toda consulta de datos personales y toda acción queda registrada (RGPD).
 const log = (adminId, accion, tipo = null, id = null, detalle = null) =>
   query('insert into admin_log(admin_id, accion, objetivo_tipo, objetivo_id, detalle) values ($1,$2,$3,$4,$5)', [adminId, accion, tipo, id, detalle]).catch(() => {});
+const pt = (req) => ({ rol: req.user.rol });
 
 const CAMPOS_USUARIO = `u.id, u.name, u.email, u.phone, u.vehiculo_modelo, u.vehiculo_color, u.vehiculo_matricula,
   u.saldo_cents, u.rating_avg, u.rating_count, u.suspended_until, u.suspension_motivo, u.is_admin, u.created_at,
@@ -43,7 +53,7 @@ r.get('/disputas', async (_q, res) => {
 });
 
 // Resolver: 'reembolsar' (al comprador) o 'pagar' (libera al vendedor).
-r.post('/disputas/:id/resolver', async (req, res) => {
+r.post('/disputas/:id/resolver', permiso('reclamaciones'), async (req, res) => {
   const p = z.object({ accion: z.enum(['reembolsar', 'pagar']) }).safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: 'Acción inválida' });
   const { rows } = await query("select transaccion_id from disputas where id=$1 and estado='abierta'", [req.params.id]);
@@ -52,6 +62,8 @@ r.post('/disputas/:id/resolver', async (req, res) => {
   if (t) await log(req.user.id, `disputa_${p.data.accion}`, 'disputa', req.params.id);
   t ? res.json({ ok: true }) : res.status(409).json({ error: 'La transacción ya no está en disputa' });
 });
+
+r.get('/yo', (req, res) => res.json({ usuario: { id: req.user.id, name: req.user.name, email: req.user.email, rol: req.user.rol, permisos: req.permisos } }));
 
 // ---------- Usuarios ----------
 r.get('/usuarios', async (req, res) => {
@@ -79,7 +91,7 @@ r.get('/usuarios/:id', async (req, res) => {
   res.json({ usuario: rows[0], transacciones: tx.rows, movimientos: mov.rows, disputas: disp.rows, ratings: rat.rows });
 });
 
-r.post('/usuarios/:id/suspender', async (req, res) => {
+r.post('/usuarios/:id/suspender', permiso('suspender'), async (req, res) => {
   const p = z.object({ dias: z.coerce.number().int().min(1).max(3650), motivo: z.string().trim().min(3).max(300) }).safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: 'Indica los días (1-3650) y el motivo' });
   const { rowCount } = await query(
@@ -90,7 +102,7 @@ r.post('/usuarios/:id/suspender', async (req, res) => {
   res.json({ ok: true });
 });
 
-r.post('/usuarios/:id/reactivar', async (req, res) => {
+r.post('/usuarios/:id/reactivar', permiso('suspender'), async (req, res) => {
   const { rowCount } = await query('update users set suspended_until=null, suspension_motivo=null where id=$1', [req.params.id]);
   if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
   await log(req.user.id, 'reactivar_usuario', 'usuario', req.params.id);
@@ -98,7 +110,7 @@ r.post('/usuarios/:id/reactivar', async (req, res) => {
 });
 
 // Ajuste manual de saldo (cortesía, corrección). Siempre con motivo y queda auditado.
-r.post('/usuarios/:id/ajuste-saldo', async (req, res) => {
+r.post('/usuarios/:id/ajuste-saldo', permiso('ajuste_saldo'), async (req, res) => {
   const p = z.object({ cents: z.coerce.number().int().refine((v) => v !== 0 && Math.abs(v) <= 5000, 'Entre -50 y 50 €'), motivo: z.string().trim().min(3).max(300) }).safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
   const c = await pool.connect();
@@ -126,14 +138,14 @@ r.get('/transacciones', async (req, res) => {
 });
 
 // ---------- Zonas bloqueadas (zona azul/naranja) ----------
-r.get('/zonas', async (_q, res) => {
+r.get('/zonas', permiso('zonas'), async (_q, res) => {
   const { rows } = await query(`select id, nombre, tipo, activa, created_at, round(ST_Area(geom)::numeric) as area_m2 from zonas_bloqueadas order by created_at desc`);
   res.json({ zonas: rows });
 });
 
 // Acepta GeoJSON (Feature, FeatureCollection o geometría: Polygon, MultiPolygon, LineString, Point).
 // Las líneas y puntos se "engordan" buffer_m metros (una calle = línea + 12 m a cada lado).
-r.post('/zonas', async (req, res) => {
+r.post('/zonas', permiso('zonas'), async (req, res) => {
   const p = z.object({
     nombre: z.string().trim().min(2).max(100), tipo: z.enum(['azul', 'naranja', 'verde', 'otra']).default('azul'),
     buffer_m: z.coerce.number().min(0).max(200).default(12), geojson: z.any(),
@@ -166,14 +178,14 @@ r.post('/zonas', async (req, res) => {
   res.status(201).json({ creadas });
 });
 
-r.patch('/zonas/:id', async (req, res) => {
+r.patch('/zonas/:id', permiso('zonas'), async (req, res) => {
   const { rowCount } = await query('update zonas_bloqueadas set activa=$2 where id=$1', [req.params.id, req.body?.activa === true]);
   if (!rowCount) return res.status(404).json({ error: 'Zona no encontrada' });
   await log(req.user.id, req.body?.activa === true ? 'activar_zona' : 'desactivar_zona', 'zona', req.params.id);
   res.json({ ok: true });
 });
 
-r.delete('/zonas/:id', async (req, res) => {
+r.delete('/zonas/:id', permiso('zonas'), async (req, res) => {
   const { rowCount } = await query('delete from zonas_bloqueadas where id=$1', [req.params.id]);
   if (!rowCount) return res.status(404).json({ error: 'Zona no encontrada' });
   await log(req.user.id, 'borrar_zona', 'zona', req.params.id);
@@ -181,11 +193,39 @@ r.delete('/zonas/:id', async (req, res) => {
 });
 
 // ---------- Auditoría ----------
-r.get('/log', async (_q, res) => {
+r.get('/log', permiso('auditoria'), async (req, res) => {
+  const soloAcciones = req.query.http !== '1';   // por defecto oculta el ruido de peticiones GET/HTTP
   const { rows } = await query(
-    `select l.id, l.accion, l.objetivo_tipo, l.objetivo_id, l.detalle, l.created_at, a.email as admin
-       from admin_log l join users a on a.id=l.admin_id order by l.id desc limit 200`);
+    `select l.id, l.accion, l.objetivo_tipo, l.objetivo_id, l.detalle, l.ip, l.created_at, a.email as admin
+       from admin_log l join users a on a.id=l.admin_id where ($1::boolean = false or l.accion <> 'http') order by l.id desc limit 300`, [soloAcciones]);
   res.json({ log: rows });
+});
+
+// Eventos del sistema (registros, accesos, pagos, reembolsos, retiradas...).
+r.get('/eventos', permiso('auditoria'), async (req, res) => {
+  const tipo = String(req.query.tipo ?? '');
+  const { rows } = await query(
+    `select e.id, e.tipo, e.payload, e.ip, e.created_at, u.email from eventos e left join users u on u.id=e.user_id
+      where $1 = '' or e.tipo like $1 || '%' order by e.id desc limit 300`, [tipo]);
+  res.json({ eventos: rows });
+});
+
+// ---------- Equipo (solo superadmin) ----------
+r.get('/equipo', permiso('equipo'), async (_q, res) => {
+  const { rows } = await query(`select id, name, email, rol, created_at from users where rol <> 'usuario' order by rol, created_at`);
+  res.json({ equipo: rows });
+});
+
+r.post('/equipo', permiso('equipo'), async (req, res) => {
+  const p = z.object({ email: z.string().email(), rol: z.enum(['usuario', 'gestor', 'superadmin']) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Email y rol (usuario, gestor o superadmin)' });
+  const email = p.data.email.toLowerCase();
+  const { rows } = await query('select id, rol from users where email=$1', [email]);
+  if (!rows[0]) return res.status(404).json({ error: 'Ese email no tiene cuenta en la app. Que se registre primero.' });
+  if (rows[0].id === req.user.id) return res.status(409).json({ error: 'No puedes cambiar tu propio rol' });
+  await query('update users set rol=$2, is_admin=$3 where id=$1', [rows[0].id, p.data.rol, p.data.rol !== 'usuario']);
+  await log(req.user.id, 'cambiar_rol', 'usuario', rows[0].id, { email, de: rows[0].rol, a: p.data.rol });
+  res.json({ ok: true });
 });
 
 export default r;

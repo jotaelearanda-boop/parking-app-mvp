@@ -3,6 +3,7 @@
 Marketplace P2P para vender/comprar plazas de aparcamiento gratuitas. Zona piloto: Calle Aloná (Alicante).
 
 - `client/` React + Vite + Tailwind (PWA) → Vercel
+- `backoffice/` Panel interno del equipo (React + Vite). **Aplicación aparte**, con otro dominio y login propio → Vercel (2.º proyecto, root `backoffice`)
 - `server/` Node/Express + PostgreSQL/PostGIS (Supabase) → Railway
 
 ## Setup local
@@ -38,8 +39,10 @@ Apple Pay / Google Pay aparecen solos en HTTPS con dominio verificado en Stripe 
 ## Tareas automáticas (`server/src/jobs.js`, cada minuto)
 Caducar plazas · cancelar reservas sin pagar tras 10 min · reembolsar disputas sin resolver tras 24 h · borrar ubicación y foto 1 h tras cerrar (RGPD).
 
-## Admin
-Marca un usuario como admin: `update users set is_admin = true where email = '...';` — verá la pestaña **Admin** (métricas y disputas).
+## Backoffice
+App separada en `backoffice/` (`cd backoffice && npm i && npm run dev` → http://localhost:5174). Login propio en `/api/backoffice/login`; solo cuentas con rol `gestor` o `superadmin`.
+Para dar el primer permiso: `update users set rol = 'superadmin' where email = '...';` (después, el equipo se gestiona desde la pestaña Equipo).
+Variable del servidor: `ADMIN_ORIGIN` = URL(s) del backoffice, separadas por comas (CORS).
 
 ## Seguridad
 - `.env*` nunca se sube a git. `STRIPE_SECRET_KEY` solo en el servidor.

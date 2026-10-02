@@ -7,6 +7,7 @@ import { notify } from '../ws.js';
 import { stripe } from '../config/stripe.js';
 import { moverSaldo } from '../config/saldo.js';
 import { liberarAlVendedor } from '../config/liquidar.js';
+import { evento } from '../config/audit.js';
 
 const r = Router();
 r.use(requireAuth);
@@ -85,6 +86,7 @@ r.post('/reservar/:plazaId', async (req, res) => {
     await client.query('commit');
     tx.client_secret = client_secret;
     if (tx.estado === 'en_escrow') notify(p.seller_id, 'plaza_pagada', { transaccion_id: tx.id });
+    evento('reserva', { userId: req.user.id, ip: req.ip, data: { transaccion: tx.id, importe: p.precio_cents, con_saldo: !!tx.pago_con_saldo } });
     notify(p.seller_id, 'comprador_interesado', { transaccion_id: tx.id, comprador: req.user.name });
     res.status(201).json(tx);
   } catch (e) { await client.query('rollback'); throw e; }
@@ -123,6 +125,7 @@ r.post('/:id/salgo', cargar, async (req, res) => {
   if (req.user.id !== req.tx.vendedor_id || req.tx.estado !== 'en_escrow')
     return res.status(409).json({ error: 'Acción no permitida' });
   const t = await liberarAlVendedor(req.tx.id, { porSalida: true });
+  if (t) evento('salida_confirmada', { userId: req.user.id, ip: req.ip, data: { transaccion: req.tx.id } });
   t ? res.json({ ok: true }) : res.status(409).json({ error: 'Ya liberada' });
 });
 
@@ -136,6 +139,7 @@ r.post('/:id/disputa', cargar, async (req, res) => {
   const up = await query("update transacciones set estado='disputada' where id=$1 and estado='en_escrow'", [req.tx.id]);
   if (!up.rowCount) return res.status(409).json({ error: 'No se puede reportar' });
   await query('insert into disputas(transaccion_id, reportada_por, motivo) values ($1,$2,$3)', [req.tx.id, req.user.id, p.data.motivo]);
+  evento('disputa_abierta', { userId: req.user.id, ip: req.ip, data: { transaccion: req.tx.id, motivo: p.data.motivo } });
   notify(req.tx.vendedor_id, 'disputa_abierta', { transaccion_id: req.tx.id });
   res.status(201).json({ ok: true });
 });

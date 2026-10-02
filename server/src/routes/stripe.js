@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { notify } from '../ws.js';
 import { pool } from '../config/db.js';
 import { moverSaldo } from '../config/saldo.js';
+import { evento } from '../config/audit.js';
 
 // --- Onboarding del vendedor (cuenta Express de Stripe Connect) ---
 export const router = Router();
@@ -65,6 +66,7 @@ export async function webhook(req, res) {
         await c.query('begin');
         await moverSaldo(c, pi.metadata.user_id, 'recarga', pi.amount_received, { stripeRef: pi.id });
         await c.query('commit');
+        evento('recarga_saldo', { userId: pi.metadata.user_id, data: { importe: pi.amount_received, pi: pi.id } });
         notify(pi.metadata.user_id, 'saldo_recargado', {});
       } catch (e) {
         await c.query('rollback');
@@ -77,12 +79,13 @@ export async function webhook(req, res) {
       `update transacciones set estado='en_escrow'
         where stripe_payment_intent=$1 and estado='pendiente_pago' returning id, vendedor_id, comprador_id`, [pi.id]);
     if (rows[0]) {
+      evento('pago_confirmado', { userId: rows[0].comprador_id, data: { transaccion: rows[0].id, pi: pi.id, importe: pi.amount_received } });
       notify(rows[0].vendedor_id, 'plaza_pagada', { transaccion_id: rows[0].id });
       notify(rows[0].comprador_id, 'pago_confirmado', { transaccion_id: rows[0].id });
     }
   }
   if (ev.type === 'payment_intent.payment_failed') {
-    await query('insert into eventos(tipo, payload) values ($1,$2)', ['stripe_pago_fallido', ev.data.object]);
+    evento('stripe_pago_fallido', { data: { pi: ev.data.object.id, error: ev.data.object.last_payment_error?.message } });
   }
   res.json({ received: true });
 }
