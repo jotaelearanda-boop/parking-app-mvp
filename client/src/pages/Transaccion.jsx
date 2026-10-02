@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
+import Pago from '../components/Pago.jsx';
 import Mapa from '../components/Mapa.jsx';
 import { api } from '../services/api.js';
 import { onMensaje } from '../services/ws.js';
@@ -11,6 +12,8 @@ const ESTADOS = {
 
 export default function Transaccion({ user }) {
   const { id } = useParams();
+  const { state } = useLocation();
+  const clientSecret = state?.clientSecret;
   const [tx, setTx] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const [texto, setTexto] = useState('');
@@ -48,8 +51,10 @@ export default function Transaccion({ user }) {
       </>}
 
       {!soyVendedor && tx.estado === 'pendiente_pago' && <>
-        <p className="text-sm text-gray-600">El pago con Stripe llega en la semana 3.</p>
-        {import.meta.env.DEV && <button className="w-full rounded-lg border border-dashed p-3 text-sm" onClick={accion(api.devPagar)}>[DEV] Simular pago</button>}
+        {clientSecret
+          ? <Pago clientSecret={clientSecret} transaccionId={id} />
+          : <p className="text-sm text-gray-600">Esperando confirmación del pago…</p>}
+        {import.meta.env.DEV && !clientSecret && <button className="w-full rounded-lg border border-dashed p-3 text-sm" onClick={accion(api.devPagar)}>[DEV] Simular pago</button>}
       </>}
       {!soyVendedor && tx.estado === 'en_escrow' && !tx.comprador_llego_at && <button className={btn} onClick={accion(api.llegue)}>He llegado</button>}
       {soyVendedor && tx.estado === 'en_escrow' && <button className={btn} onClick={accion(api.salgo)}>SALGO (liberar plaza)</button>}

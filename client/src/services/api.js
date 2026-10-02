@@ -9,7 +9,7 @@ async function req(path, { method = 'GET', body, form } = {}) {
   const res = await fetch(`/api${path}`, { method, headers, body: form ?? (body && JSON.stringify(body)) });
   if (res.status === 204) return null;
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(data.error ?? `Error ${res.status}`), { codigo: data.codigo });
   return data;
 }
 
@@ -19,6 +19,8 @@ export const api = {
   yo: () => req('/auth/yo'),
   publicarPlaza: (form) => req('/plazas', { method: 'POST', form }),
   plazasCerca: (q) => req(`/plazas/cerca?${new URLSearchParams(q)}`),
+  stripeOnboarding: () => req('/stripe/onboarding', { method: 'POST' }),
+  stripeEstado: () => req('/stripe/estado'),
   reservar: (plazaId) => req(`/transacciones/reservar/${plazaId}`, { method: 'POST' }),
   misTransacciones: () => req('/transacciones'),
   transaccion: (id) => req(`/transacciones/${id}`),

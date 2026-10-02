@@ -8,5 +8,6 @@ export const env = {
   jwtSecret: need('JWT_SECRET'),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   comisionPct: Number(process.env.COMISION_PCT ?? 20),
-  stripeKey: process.env.STRIPE_SECRET_KEY, // opcional hasta la semana 3
+  stripeKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 };

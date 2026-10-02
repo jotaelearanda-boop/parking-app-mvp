@@ -12,7 +12,7 @@ export default function BuscarPlaza() {
   const [precioMax, setPrecioMax] = useState('');
   const [err, setErr] = useState('');
   const nav = useNavigate();
-  const reservar = () => api.reservar(sel.id).then((t) => nav(`/transaccion/${t.id}`)).catch((e) => setErr(e.message));
+  const reservar = () => api.reservar(sel.id).then((t) => nav(`/transaccion/${t.id}`, { state: { clientSecret: t.client_secret } })).catch((e) => setErr(e.message));
 
   useEffect(() => {
     const cargar = () => api.plazasCerca({

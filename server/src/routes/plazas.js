@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { query } from '../config/db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { vendedorListo } from './stripe.js';
 
 const r = Router();
 
@@ -34,6 +35,8 @@ r.post('/', requireAuth, upload.single('foto'), async (req, res) => {
   const p = crearSchema.safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
   const { lat, lng, tiempo_min, precio_cents } = p.data;
+  if (!(await vendedorListo(req.user)))
+    return res.status(402).json({ error: 'Completa tu cuenta de cobros (Stripe) para vender', codigo: 'stripe_onboarding' });
   const activa = await query(
     `select 1 from plazas_activas where seller_id=$1 and estado in ('disponible','reservada')`, [req.user.id]);
   if (activa.rowCount) return res.status(409).json({ error: 'Ya tienes una plaza activa' });

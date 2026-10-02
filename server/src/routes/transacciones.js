@@ -4,6 +4,7 @@ import { pool, query } from '../config/db.js';
 import { env } from '../config/env.js';
 import { requireAuth } from '../middleware/auth.js';
 import { notify } from '../ws.js';
+import { stripe } from '../config/stripe.js';
 
 const r = Router();
 r.use(requireAuth);
@@ -30,7 +31,7 @@ r.get('/', async (req, res) => {
 });
 
 // SOLO DESARROLLO: simula el pago hasta integrar Stripe (semana 3). Desactivado en producción.
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && !stripe) {
   r.post('/:id/dev-pagar', cargar, async (req, res) => {
     if (req.user.id !== req.tx.comprador_id || req.tx.estado !== 'pendiente_pago')
       return res.status(409).json({ error: 'Acción no permitida' });
@@ -57,7 +58,18 @@ r.post('/reservar/:plazaId', async (req, res) => {
       `insert into transacciones(plaza_id, vendedor_id, comprador_id, monto_cents, comision_cents)
        values ($1,$2,$3,$4,$5) returning id, estado, monto_cents`,
       [p.id, p.seller_id, req.user.id, p.precio_cents, comision])).rows[0];
+    let client_secret;
+    if (stripe) {
+      // Cobro a la plataforma (escrow): el dinero queda en el balance de Stripe hasta "SALGO".
+      const pi = await stripe.paymentIntents.create({
+        amount: p.precio_cents, currency: 'eur', automatic_payment_methods: { enabled: true },
+        transfer_group: tx.id, metadata: { transaccion_id: tx.id },
+      }, { idempotencyKey: `pi-${tx.id}` });
+      await client.query('update transacciones set stripe_payment_intent=$1 where id=$2', [pi.id, tx.id]);
+      client_secret = pi.client_secret;
+    }
     await client.query('commit');
+    tx.client_secret = client_secret;
     notify(p.seller_id, 'comprador_interesado', { transaccion_id: tx.id, comprador: req.user.name });
     res.status(201).json(tx);
   } catch (e) { await client.query('rollback'); throw e; }
@@ -89,7 +101,15 @@ r.post('/:id/llegue', cargar, async (req, res) => {
 r.post('/:id/salgo', cargar, async (req, res) => {
   if (req.user.id !== req.tx.vendedor_id || req.tx.estado !== 'en_escrow')
     return res.status(409).json({ error: 'Acción no permitida' });
-  // TODO semana 3: stripe.transfers.create(...) antes de marcar liberada
+  if (stripe) {
+    // Libera al vendedor lo cobrado menos la comisión de la plataforma.
+    const pi = await stripe.paymentIntents.retrieve(req.tx.stripe_payment_intent);
+    await stripe.transfers.create({
+      amount: req.tx.monto_cents - req.tx.comision_cents, currency: 'eur',
+      destination: req.user.stripe_account_id, source_transaction: pi.latest_charge,
+      transfer_group: req.tx.id, metadata: { transaccion_id: req.tx.id },
+    }, { idempotencyKey: `tr-${req.tx.id}` });
+  }
   await query(`update transacciones set estado='liberada', vendedor_salio_at=now(),
                location_purge_at=now() + interval '1 hour' where id=$1`, [req.tx.id]);
   await query(`update plazas_activas set estado='completada' where id=$1`, [req.tx.plaza_id]);
