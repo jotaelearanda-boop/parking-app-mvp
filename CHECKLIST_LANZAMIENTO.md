@@ -34,9 +34,17 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 ## Google Maps
 - [x] Dominio de Vercel añadido a la clave de Maps. Pendiente: quitar `localhost` de las restricciones antes del lanzamiento público.
 
+## Zonas reguladas (ORA)
+- [ ] El portal de datos abiertos de Alicante **no publica** las zonas ORA y OpenStreetMap no tiene cobertura en Benalúa. Opciones: pedir al Ayuntamiento/concesionaria el plano oficial, o dibujar las calles a mano en Backoffice → Zonas (geojson.io).
+- [ ] **Riesgo de negocio:** la ampliación de la ORA incluye Benalúa y Benalúa Sur. Comprobar si Aloná y García Andreu pasarán a zona azul/naranja y cuándo.
+- [ ] Cargar todas las zonas azules/naranjas del piloto en el backoffice antes de abrir el beta.
+
+## Backoffice
+- [ ] Marcar como admin solo las cuentas reales de gestión (`is_admin`). Cada consulta de datos personales queda en la pestaña Auditoría.
+
 ## Legal y privacidad
 - [ ] **Consulta con abogado**: legalidad de vender/comprar plazas en vía pública en Alicante, saldo interno (dinero electrónico) y comisión.
-- [ ] Política de privacidad (matrícula = dato personal, ubicación borrada tras 1 h) y términos de uso.
+- [ ] Revisar con abogado los **borradores** de Términos y Privacidad (`client/src/pages/Legal.jsx`) y rellenar los datos del titular `[entre corchetes]`. Al cambiar los textos, subir `POLITICAS_VERSION` en `server/src/routes/auth.js` para que todos vuelvan a aceptar.
 - [ ] Banner de cookies / consentimiento si procede.
 - [ ] Aviso al usuario sobre el reembolso y las disputas (24 h).
 

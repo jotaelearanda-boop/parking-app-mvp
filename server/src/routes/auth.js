@@ -5,7 +5,7 @@ import { query } from '../config/db.js';
 import { signToken, requireAuth } from '../middleware/auth.js';
 
 const r = Router();
-const publico = ({ password_hash, stripe_account_id, ...u }) => u;
+const publico = ({ password_hash, stripe_account_id, ...u }) => ({ ...u, politicas_ok: u.consent_version === POLITICAS_VERSION });
 
 // Matrícula: se normaliza a mayúsculas sin espacios/guiones (cubre formato nuevo 1234BCD, antiguo A1234BC y extranjeras).
 const vehiculoSchema = z.object({
@@ -15,7 +15,10 @@ const vehiculoSchema = z.object({
     .refine((v) => /^[A-Z0-9]{4,10}$/.test(v), 'Matrícula no válida'),
 });
 
+export const POLITICAS_VERSION = '2026-10-beta';
+
 const registroSchema = vehiculoSchema.extend({
+  acepta_politicas: z.literal(true, { error: 'Debes aceptar los términos y la política de privacidad' }),
   email: z.string().email(),
   phone: z.string().regex(/^\+?[0-9 ]{9,15}$/, 'Teléfono inválido'),
   name: z.string().min(2).max(60),
@@ -29,9 +32,9 @@ r.post('/registro', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await query(
-      `insert into users(email, phone, name, password_hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula)
-       values (lower($1),$2,$3,$4,$5,$6,$7) returning *`,
-      [email, phone, name, hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula]);
+      `insert into users(email, phone, name, password_hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula, consent_at, consent_version)
+       values (lower($1),$2,$3,$4,$5,$6,$7, now(), $8) returning *`,
+      [email, phone, name, hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula, POLITICAS_VERSION]);
     // TODO semana 3: enviar código de verificación por email/SMS (proveedor por decidir)
     res.status(201).json({ token: signToken(rows[0]), user: publico(rows[0]) });
   } catch (e) {
@@ -55,6 +58,13 @@ r.put('/vehiculo', requireAuth, async (req, res) => {
   const { rows } = await query(
     'update users set vehiculo_modelo=$1, vehiculo_color=$2, vehiculo_matricula=$3 where id=$4 returning *',
     [p.data.vehiculo_modelo, p.data.vehiculo_color, p.data.vehiculo_matricula, req.user.id]);
+  res.json({ user: publico(rows[0]) });
+});
+
+// Usuarios anteriores a las políticas (o con una versión antigua) aceptan aquí.
+r.post('/consentimiento', requireAuth, async (req, res) => {
+  if (req.body?.acepta_politicas !== true) return res.status(400).json({ error: 'Debes aceptar para continuar' });
+  const { rows } = await query('update users set consent_at=now(), consent_version=$1 where id=$2 returning *', [POLITICAS_VERSION, req.user.id]);
   res.json({ user: publico(rows[0]) });
 });
 

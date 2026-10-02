@@ -29,6 +29,9 @@ r.post('/', requireAuth, async (req, res) => {
       [lat, lng, env.zona.lat, env.zona.lng, env.zona.radioM]);
     if (!z[0].dentro) return res.status(422).json({ error: 'Estás fuera de la zona piloto (Benalúa: Aloná y García Andreu)' });
   }
+  const { rows: zb } = await query(
+    `select nombre, tipo from zonas_bloqueadas where activa and ST_Intersects(geom, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography) limit 1`, [lat, lng]);
+  if (zb[0]) return res.status(422).json({ error: `Esta calle está en zona regulada (${zb[0].tipo}: ${zb[0].nombre}). Aquí no se pueden vender plazas.`, codigo: 'zona_bloqueada' });
   const activa = await query(
     `select 1 from plazas_activas where seller_id=$1 and estado in ('disponible','reservada')`, [req.user.id]);
   if (activa.rowCount) return res.status(409).json({ error: 'Ya tienes una plaza activa' });
@@ -67,6 +70,13 @@ r.get('/cerca', requireAuth, async (req, res) => {
       order by distancia_m limit 100`,
     [lat, lng, radio, precio_max ?? null, min_restante, req.user.id]);
   res.json({ plazas: rows });
+});
+
+// Zonas bloqueadas (azul/naranja) como GeoJSON, para pintarlas en el mapa.
+r.get('/zonas', requireAuth, async (_q, res) => {
+  const { rows } = await query(
+    `select id, nombre, tipo, ST_AsGeoJSON(geom::geometry)::json as geometry from zonas_bloqueadas where activa`);
+  res.json({ type: 'FeatureCollection', features: rows.map((z) => ({ type: 'Feature', properties: { id: z.id, nombre: z.nombre, tipo: z.tipo }, geometry: z.geometry })) });
 });
 
 // Mi plaza activa (para la pantalla "Mi coche"). Es mía, así que se devuelve la ubicación exacta.
