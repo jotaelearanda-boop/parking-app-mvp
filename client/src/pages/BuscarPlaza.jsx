@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Mapa from '../components/Mapa.jsx';
 import { api } from '../services/api.js';
 import { ZONA_PILOTO } from '../services/geolocation.js';
@@ -10,6 +11,8 @@ export default function BuscarPlaza() {
   const [sel, setSel] = useState(null);
   const [precioMax, setPrecioMax] = useState('');
   const [err, setErr] = useState('');
+  const nav = useNavigate();
+  const reservar = () => api.reservar(sel.id).then((t) => nav(`/transaccion/${t.id}`)).catch((e) => setErr(e.message));
 
   useEffect(() => {
     const cargar = () => api.plazasCerca({
@@ -34,7 +37,7 @@ export default function BuscarPlaza() {
         <div className="space-y-1 border-t bg-white p-4">
           <p className="text-lg font-bold">{eur(sel.precio_cents)} · {sel.minutos_restantes} min restantes</p>
           <p>A {sel.distancia_m} m · {sel.vendedor} ★ {Number(sel.rating_avg).toFixed(1)} ({sel.rating_count})</p>
-          <button disabled className="mt-2 w-full rounded-lg bg-gray-300 p-3 font-semibold">Comprar plaza (próximamente: Stripe)</button>
+          <button onClick={reservar} className="mt-2 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white">Reservar plaza</button>
         </div>
       )}
       {!plazas.length && <p className="p-4 text-gray-500">No hay plazas disponibles ahora mismo.</p>}

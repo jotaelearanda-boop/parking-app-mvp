@@ -19,6 +19,27 @@ async function cargar(req, res, next) {
 }
 const otro = (t, uid) => (t.vendedor_id === uid ? t.comprador_id : t.vendedor_id);
 
+// Mis transacciones (como comprador o vendedor), más recientes primero.
+r.get('/', async (req, res) => {
+  const { rows } = await query(
+    `select t.id, t.estado, t.monto_cents, t.created_at,
+            (t.vendedor_id = $1) as soy_vendedor
+       from transacciones t where $1 in (t.vendedor_id, t.comprador_id)
+      order by t.created_at desc limit 20`, [req.user.id]);
+  res.json({ transacciones: rows });
+});
+
+// SOLO DESARROLLO: simula el pago hasta integrar Stripe (semana 3). Desactivado en producción.
+if (process.env.NODE_ENV !== 'production') {
+  r.post('/:id/dev-pagar', cargar, async (req, res) => {
+    if (req.user.id !== req.tx.comprador_id || req.tx.estado !== 'pendiente_pago')
+      return res.status(409).json({ error: 'Acción no permitida' });
+    await query("update transacciones set estado='en_escrow' where id=$1", [req.tx.id]);
+    notify(req.tx.vendedor_id, 'plaza_pagada', { transaccion_id: req.tx.id });
+    res.json({ ok: true });
+  });
+}
+
 // Comprador reserva una plaza. El pago (Stripe) se engancha aquí en la semana 3.
 r.post('/reservar/:plazaId', async (req, res) => {
   const client = await pool.connect();
