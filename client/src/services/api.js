@@ -1,0 +1,23 @@
+// Cliente HTTP del backend. El token JWT vive en localStorage (MVP).
+export const getToken = () => localStorage.getItem('token');
+export const setSession = (token) => token ? localStorage.setItem('token', token) : localStorage.removeItem('token');
+
+async function req(path, { method = 'GET', body, form } = {}) {
+  const headers = {};
+  if (getToken()) headers.Authorization = `Bearer ${getToken()}`;
+  if (body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`/api${path}`, { method, headers, body: form ?? (body && JSON.stringify(body)) });
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+  return data;
+}
+
+export const api = {
+  registro: (b) => req('/auth/registro', { method: 'POST', body: b }),
+  login: (b) => req('/auth/login', { method: 'POST', body: b }),
+  yo: () => req('/auth/yo'),
+  publicarPlaza: (form) => req('/plazas', { method: 'POST', form }),
+  plazasCerca: (q) => req(`/plazas/cerca?${new URLSearchParams(q)}`),
+  cancelarPlaza: (id) => req(`/plazas/${id}`, { method: 'DELETE' }),
+};
