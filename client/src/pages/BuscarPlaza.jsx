@@ -11,6 +11,8 @@ export default function BuscarPlaza() {
   const [sel, setSel] = useState(null);
   const [precioMax, setPrecioMax] = useState('');
   const [err, setErr] = useState('');
+  const [saldo, setSaldo] = useState(0);
+  useEffect(() => { api.saldo().then((r) => setSaldo(r.saldo_cents)).catch(() => {}); }, []);
   const nav = useNavigate();
   const reservar = () => api.reservar(sel.id).then((t) => nav(`/transaccion/${t.id}`, { state: { clientSecret: t.client_secret } })).catch((e) => setErr(e.message));
 
@@ -37,7 +39,7 @@ export default function BuscarPlaza() {
         <div className="space-y-1 border-t bg-white p-4">
           <p className="text-lg font-bold">{eur(sel.precio_cents)} · {sel.minutos_restantes} min restantes</p>
           <p>A {sel.distancia_m} m · {sel.vendedor} ★ {Number(sel.rating_avg).toFixed(1)} ({sel.rating_count})</p>
-          <button onClick={reservar} className="mt-2 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white">Reservar plaza</button>
+          <button onClick={reservar} className="mt-2 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white">{saldo >= sel.precio_cents ? 'Reservar y pagar con saldo' : 'Reservar y pagar con tarjeta'}</button>
         </div>
       )}
       {!plazas.length && <p className="p-4 text-gray-500">No hay plazas disponibles ahora mismo.</p>}

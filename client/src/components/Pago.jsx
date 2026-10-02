@@ -4,7 +4,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 
 const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) : null;
 
-function Formulario({ transaccionId }) {
+function Formulario({ returnPath }) {
   const stripe = useStripe();
   const elements = useElements();
   const [err, setErr] = useState('');
@@ -15,7 +15,7 @@ function Formulario({ transaccionId }) {
     if (!stripe) return;
     setEnviando(true); setErr('');
     const { error } = await stripe.confirmPayment({
-      elements, confirmParams: { return_url: `${location.origin}/transaccion/${transaccionId}` },
+      elements, confirmParams: { return_url: `${location.origin}${returnPath}` },
     });
     if (error) { setErr(error.message); setEnviando(false); } // si va bien, Stripe redirige o avisa por webhook
   }
@@ -30,7 +30,7 @@ function Formulario({ transaccionId }) {
   );
 }
 
-export default function Pago({ clientSecret, transaccionId }) {
+export default function Pago({ clientSecret, returnPath }) {
   if (!stripePromise) return <p className="text-red-600">Falta VITE_STRIPE_PUBLISHABLE_KEY</p>;
-  return <Elements stripe={stripePromise} options={{ clientSecret }}><Formulario transaccionId={transaccionId} /></Elements>;
+  return <Elements stripe={stripePromise} options={{ clientSecret }}><Formulario returnPath={returnPath} /></Elements>;
 }

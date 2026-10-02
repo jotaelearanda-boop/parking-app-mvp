@@ -52,7 +52,7 @@ export default function Transaccion({ user }) {
 
       {!soyVendedor && tx.estado === 'pendiente_pago' && <>
         {clientSecret
-          ? <Pago clientSecret={clientSecret} transaccionId={id} />
+          ? <Pago clientSecret={clientSecret} returnPath={`/transaccion/${id}`} />
           : <p className="text-sm text-gray-600">Esperando confirmación del pago…</p>}
         {import.meta.env.DEV && !clientSecret && <button className="w-full rounded-lg border border-dashed p-3 text-sm" onClick={accion(api.devPagar)}>[DEV] Simular pago</button>}
       </>}

@@ -4,6 +4,8 @@ import { env } from '../config/env.js';
 import { stripe, requireStripe } from '../config/stripe.js';
 import { requireAuth } from '../middleware/auth.js';
 import { notify } from '../ws.js';
+import { pool } from '../config/db.js';
+import { moverSaldo } from '../config/saldo.js';
 
 // --- Onboarding del vendedor (cuenta Express de Stripe Connect) ---
 export const router = Router();
@@ -22,7 +24,7 @@ router.post('/onboarding', requireAuth, requireStripe, async (req, res) => {
   }
   const link = await stripe.accountLinks.create({
     account: acct, type: 'account_onboarding',
-    return_url: `${env.clientOrigin}/vender?stripe=ok`, refresh_url: `${env.clientOrigin}/vender?stripe=reintentar`,
+    return_url: `${env.clientOrigin}/saldo?stripe=ok`, refresh_url: `${env.clientOrigin}/saldo?stripe=reintentar`,
   });
   res.json({ url: link.url });
 });
@@ -50,6 +52,20 @@ export async function webhook(req, res) {
   }
   if (ev.type === 'payment_intent.succeeded') {
     const pi = ev.data.object;
+    if (pi.metadata?.tipo === 'recarga') {
+      // Idempotente por índice único (tipo, stripe_ref): un reintento del webhook no vuelve a abonar.
+      const c = await pool.connect();
+      try {
+        await c.query('begin');
+        await moverSaldo(c, pi.metadata.user_id, 'recarga', pi.amount_received, { stripeRef: pi.id });
+        await c.query('commit');
+        notify(pi.metadata.user_id, 'saldo_recargado', {});
+      } catch (e) {
+        await c.query('rollback');
+        if (e.code !== '23505') throw e;
+      } finally { c.release(); }
+      return res.json({ received: true });
+    }
     // Idempotente: solo pasa de pendiente_pago a en_escrow una vez.
     const { rows } = await query(
       `update transacciones set estado='en_escrow'

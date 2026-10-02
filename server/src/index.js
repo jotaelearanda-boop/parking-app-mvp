@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js';
 import transaccionesRoutes from './routes/transacciones.js';
 import { attachWs } from './ws.js';
 import { router as stripeRoutes, webhook } from './routes/stripe.js';
+import saldoRoutes from './routes/saldo.js';
 import plazasRoutes, { UPLOAD_DIR } from './routes/plazas.js';
 
 export const app = express();
@@ -20,6 +21,7 @@ app.use('/uploads', express.static(UPLOAD_DIR)); // TODO: restringir foto matrí
 app.get('/health', (_q, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: 20 }), authRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/saldo', saldoRoutes);
 app.use('/api/plazas', plazasRoutes);
 app.use('/api/transacciones', transaccionesRoutes);
 
