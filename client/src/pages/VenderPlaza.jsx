@@ -10,7 +10,11 @@ export default function VenderPlaza() {
   const [msg, setMsg] = useState('');
   const [plazaId, setPlazaId] = useState(null);
 
-  const aparcado = () => posicionActual().then(setPos).catch((e) => setMsg('No pude obtener tu ubicación: ' + e.message));
+  const aparcado = () => posicionActual().then(setPos).catch((e) => setMsg(
+    e.code === 1
+      ? 'Necesitamos tu ubicación para publicar la plaza. En el iPhone: pulsa "aA" en la barra de Safari → Ajustes del sitio web → Ubicación → Permitir (y revisa Ajustes → Privacidad → Localización → Sitios web de Safari). Luego vuelve a pulsar el botón.'
+      : e.code === 3 ? 'Tardó demasiado en localizarte. Sal a un sitio con mejor cobertura e inténtalo otra vez.'
+      : 'No pude obtener tu ubicación. Comprueba que la localización está activada.'));
 
   async function publicar(e) {
     e.preventDefault(); setMsg('');
