@@ -1,25 +1,10 @@
 import { Router } from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import { mkdirSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { query } from '../config/db.js';
+import { env } from '../config/env.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const r = Router();
-
-// Fotos en disco local para el MVP. TODO: pasar a Supabase Storage/S3 en deploy (Railway tiene disco efímero).
-export const UPLOAD_DIR = path.resolve('uploads');
-mkdirSync(UPLOAD_DIR, { recursive: true });
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (_q, f, cb) => cb(null, randomUUID() + path.extname(f.originalname).toLowerCase()),
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_q, f, cb) => cb(null, /^image\/(jpeg|png|webp)$/.test(f.mimetype)),
-});
 
 const crearSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
@@ -28,20 +13,26 @@ const crearSchema = z.object({
   precio_cents: z.coerce.number().int().min(50).max(2000).default(150),
 });
 
-// Vendedor publica su plaza. La foto de matrícula es obligatoria.
-r.post('/', requireAuth, upload.single('foto'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Foto de matrícula obligatoria (jpg/png/webp, máx 5MB)' });
+// Vendedor publica su plaza. Necesita tener su coche registrado (el comprador lo verá tras pagar).
+r.post('/', requireAuth, async (req, res) => {
+  if (!req.user.vehiculo_matricula) return res.status(409).json({ error: 'Añade los datos de tu coche antes de vender', codigo: 'falta_vehiculo' });
   const p = crearSchema.safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
   const { lat, lng, tiempo_min, precio_cents } = p.data;
+  if (env.zona.estricta) {
+    const { rows: z } = await query(
+      'select ST_DWithin(ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, ST_SetSRID(ST_MakePoint($4,$3),4326)::geography, $5) as dentro',
+      [lat, lng, env.zona.lat, env.zona.lng, env.zona.radioM]);
+    if (!z[0].dentro) return res.status(422).json({ error: 'Estás fuera de la zona piloto (Benalúa: Aloná y García Andreu)' });
+  }
   const activa = await query(
     `select 1 from plazas_activas where seller_id=$1 and estado in ('disponible','reservada')`, [req.user.id]);
   if (activa.rowCount) return res.status(409).json({ error: 'Ya tienes una plaza activa' });
   const { rows } = await query(
-    `insert into plazas_activas(seller_id, geo, tiempo_min, precio_cents, foto_matricula_url, expira_at)
-     values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, $5, $6, now() + make_interval(mins => $4))
+    `insert into plazas_activas(seller_id, geo, tiempo_min, precio_cents, expira_at)
+     values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, $5, now() + make_interval(mins => $4))
      returning id, estado, expira_at`,
-    [req.user.id, lat, lng, tiempo_min, precio_cents, `/uploads/${req.file.filename}`]);
+    [req.user.id, lat, lng, tiempo_min, precio_cents]);
   res.status(201).json(rows[0]);
 });
 

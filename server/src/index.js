@@ -10,7 +10,7 @@ import { router as stripeRoutes, webhook } from './routes/stripe.js';
 import saldoRoutes from './routes/saldo.js';
 import adminRoutes from './routes/admin.js';
 import { iniciarJobs } from './jobs.js';
-import plazasRoutes, { UPLOAD_DIR } from './routes/plazas.js';
+import plazasRoutes from './routes/plazas.js';
 
 export const app = express();
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -18,7 +18,6 @@ app.use(cors({ origin: env.clientOrigin }));
 // El webhook de Stripe necesita el cuerpo crudo: va ANTES de express.json.
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), webhook);
 app.use(express.json({ limit: '100kb' }));
-app.use('/uploads', express.static(UPLOAD_DIR)); // TODO: restringir foto matrícula tras compra
 
 app.get('/health', (_q, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: 20 }), authRoutes);

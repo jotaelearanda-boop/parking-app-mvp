@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import CamposVehiculo from '../components/CamposVehiculo.jsx';
 import { api, setSession } from '../services/api.js';
 
 export default function Auth({ onLogin }) {
   const [modo, setModo] = useState('login');
-  const [f, setF] = useState({ email: '', password: '', name: '', phone: '' });
+  const [f, setF] = useState({ email: '', password: '', name: '', phone: '', vehiculo_modelo: '', vehiculo_color: '', vehiculo_matricula: '' });
   const [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
@@ -22,6 +23,8 @@ export default function Auth({ onLogin }) {
         <input className={input} placeholder="Nombre" value={f.name} onChange={set('name')} required />
         <input className={input} placeholder="Teléfono" type="tel" value={f.phone} onChange={set('phone')} required />
       </>}
+      {modo === 'registro' && <p className="pt-1 text-sm text-gray-600">Tu coche (el comprador/vendedor lo verá solo tras pagar, para reconoceros en la calle)</p>}
+      {modo === 'registro' && <CamposVehiculo f={f} set={set} />}
       <input className={input} placeholder="Email" type="email" value={f.email} onChange={set('email')} required />
       <input className={input} placeholder="Contraseña (mín. 8)" type="password" value={f.password} onChange={set('password')} required />
       {err && <p className="text-red-600">{err}</p>}

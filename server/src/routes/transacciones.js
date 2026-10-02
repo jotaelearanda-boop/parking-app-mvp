@@ -86,14 +86,20 @@ r.post('/reservar/:plazaId', async (req, res) => {
   finally { client.release(); }
 });
 
-// Detalle. Ubicación exacta y foto solo tras pagar (en_escrow) y para el comprador.
+// Detalle. Ubicación exacta solo tras pagar (en_escrow) y para el comprador.
 r.get('/:id', cargar, async (req, res) => {
   const t = req.tx;
   const out = { ...t };
   if (req.user.id === t.comprador_id && ['en_escrow', 'liberada'].includes(t.estado)) {
     const { rows } = await query(
-      `select ST_Y(geo::geometry) lat, ST_X(geo::geometry) lng, foto_matricula_url from plazas_activas where id=$1`, [t.plaza_id]);
+      `select ST_Y(geo::geometry) lat, ST_X(geo::geometry) lng from plazas_activas where id=$1`, [t.plaza_id]);
     Object.assign(out, rows[0]);
+  }
+  // Tras pagar, cada parte ve el coche de la otra (como Uber) para reconocerse en la calle.
+  if (['en_escrow', 'liberada', 'disputada'].includes(t.estado)) {
+    const { rows } = await query(
+      'select name, vehiculo_modelo modelo, vehiculo_color color, vehiculo_matricula matricula from users where id=$1', [otro(t, req.user.id)]);
+    out.otro = rows[0];
   }
   res.json(out);
 });

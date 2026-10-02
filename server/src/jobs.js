@@ -1,9 +1,6 @@
 // Tareas periódicas (cada minuto). Aptas para una sola instancia de servidor en el MVP.
-import { unlink } from 'node:fs/promises';
-import path from 'node:path';
 import { query } from './config/db.js';
 import { reembolsar } from './config/liquidar.js';
-import { UPLOAD_DIR } from './routes/plazas.js';
 
 async function tick() {
   // 1. Plazas disponibles que han caducado.
@@ -19,15 +16,14 @@ async function tick() {
     "select transaccion_id from disputas where estado='abierta' and created_at < now() - interval '24 hours'");
   for (const d of disp) await reembolsar(d.transaccion_id);
 
-  // 4. RGPD: borrar ubicación y foto 1 h después de cerrar (o 1 h tras caducar si nunca hubo compra).
+  // 4. RGPD: borrar ubicación 1 h después de cerrar (o 1 h tras caducar si nunca hubo compra).
   const { rows: cand } = await query(
-    `select p.id, p.foto_matricula_url from plazas_activas p
+    `select p.id from plazas_activas p
       where p.purgada_at is null and p.estado in ('completada','cancelada','expirada') and (
         exists (select 1 from transacciones t where t.plaza_id=p.id and t.location_purge_at < now())
         or (not exists (select 1 from transacciones t where t.plaza_id=p.id) and p.expira_at < now() - interval '1 hour'))`);
   for (const c of cand) {
-    if (c.foto_matricula_url) await unlink(path.join(UPLOAD_DIR, path.basename(c.foto_matricula_url))).catch(() => {});
-    await query('update plazas_activas set geo=null, foto_matricula_url=null, purgada_at=now() where id=$1', [c.id]);
+    await query('update plazas_activas set geo=null, purgada_at=now() where id=$1', [c.id]);
   }
 }
 

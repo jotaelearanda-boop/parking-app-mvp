@@ -7,21 +7,16 @@ export default function VenderPlaza() {
   const [pos, setPos] = useState(null);
   const [tiempo, setTiempo] = useState(60);
   const [precio, setPrecio] = useState('1.50');
-  const [foto, setFoto] = useState(null);
   const [msg, setMsg] = useState('');
   const [plazaId, setPlazaId] = useState(null);
-  const [necesitaStripe, setNecesitaStripe] = useState(false);
-  const abrirStripe = () => api.stripeOnboarding().then((r) => { location.href = r.url; }).catch((e) => setMsg(e.message));
 
   const aparcado = () => posicionActual().then(setPos).catch((e) => setMsg('No pude obtener tu ubicación: ' + e.message));
 
   async function publicar(e) {
     e.preventDefault(); setMsg('');
-    const fd = new FormData();
-    fd.append('lat', pos.lat); fd.append('lng', pos.lng); fd.append('tiempo_min', tiempo);
-    fd.append('precio_cents', Math.round(Number(precio.replace(',', '.')) * 100)); fd.append('foto', foto);
-    try { const r = await api.publicarPlaza(fd); setPlazaId(r.id); setMsg('Plaza publicada ✅'); }
-    catch (x) { setMsg(x.message); setNecesitaStripe(x.codigo === 'stripe_onboarding'); }
+    const body = { lat: pos.lat, lng: pos.lng, tiempo_min: tiempo, precio_cents: Math.round(Number(precio.replace(',', '.')) * 100) };
+    try { const r = await api.publicarPlaza(body); setPlazaId(r.id); setMsg('Plaza publicada ✅'); }
+    catch (x) { setMsg(x.message); }
   }
 
   if (!pos) return (
@@ -40,12 +35,9 @@ export default function VenderPlaza() {
           </select></label>
         <label className="block">Precio (€)
           <input className="mt-1 w-full rounded border p-2" value={precio} onChange={(e) => setPrecio(e.target.value)} inputMode="decimal" /></label>
-        <label className="block">Foto de la matrícula (obligatoria)
-          <input className="mt-1 w-full" type="file" accept="image/*" capture="environment" required onChange={(e) => setFoto(e.target.files[0])} /></label>
         <button disabled={!!plazaId} className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white disabled:bg-gray-300">PUBLICAR</button>
         {plazaId && <button type="button" className="w-full rounded-lg border p-3" onClick={() => api.cancelarPlaza(plazaId).then(() => { setPlazaId(null); setPos(null); setMsg(''); })}>Cancelar plaza</button>}
         {msg && <p>{msg}</p>}
-        {necesitaStripe && <button type="button" onClick={abrirStripe} className="w-full rounded-lg bg-green-600 p-3 font-semibold text-white">Configurar cobros (Stripe)</button>}
       </div>
     </form>
   );

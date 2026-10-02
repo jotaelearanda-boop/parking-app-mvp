@@ -16,8 +16,9 @@ async function req(path, { method = 'GET', body, form } = {}) {
 export const api = {
   registro: (b) => req('/auth/registro', { method: 'POST', body: b }),
   login: (b) => req('/auth/login', { method: 'POST', body: b }),
+  guardarVehiculo: (b) => req('/auth/vehiculo', { method: 'PUT', body: b }),
   yo: () => req('/auth/yo'),
-  publicarPlaza: (form) => req('/plazas', { method: 'POST', form }),
+  publicarPlaza: (body) => req('/plazas', { method: 'POST', body }),
   plazasCerca: (q) => req(`/plazas/cerca?${new URLSearchParams(q)}`),
   stripeOnboarding: () => req('/stripe/onboarding', { method: 'POST' }),
   stripeEstado: () => req('/stripe/estado'),

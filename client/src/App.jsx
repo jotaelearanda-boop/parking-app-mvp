@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import Transaccion from './pages/Transaccion.jsx';
+import CamposVehiculo from './components/CamposVehiculo.jsx';
 import Admin from './pages/Admin.jsx';
 import Saldo from './pages/Saldo.jsx';
 import Auth from './pages/Auth.jsx';
@@ -9,12 +10,35 @@ import VenderPlaza from './pages/VenderPlaza.jsx';
 import { api, getToken, setSession } from './services/api.js';
 import { cerrarWs, conectarWs, onMensaje } from './services/ws.js';
 
-function MisTransacciones() {
+function MiCoche({ user, onUser }) {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({ vehiculo_modelo: user.vehiculo_modelo ?? '', vehiculo_color: user.vehiculo_color ?? '', vehiculo_matricula: user.vehiculo_matricula ?? '' });
+  const [err, setErr] = useState('');
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const guardar = (e) => { e.preventDefault(); api.guardarVehiculo(f).then((r) => { onUser(r.user); setEdit(false); }).catch((x) => setErr(x.message)); };
+  if (!edit) return (
+    <div className="rounded-lg border bg-white p-3">
+      <p className="text-xs text-gray-500">Mi coche</p>
+      <p className="font-semibold">{user.vehiculo_modelo ? `${user.vehiculo_modelo} · ${user.vehiculo_color} · ${user.vehiculo_matricula}` : 'Sin datos'}</p>
+      <button className="text-sm text-blue-600" onClick={() => setEdit(true)}>Editar</button>
+    </div>
+  );
+  return (
+    <form onSubmit={guardar} className="space-y-2 rounded-lg border bg-white p-3">
+      <CamposVehiculo f={f} set={set} />
+      {err && <p className="text-red-600">{err}</p>}
+      <button className="w-full rounded-lg bg-blue-600 p-2 font-semibold text-white">Guardar</button>
+    </form>
+  );
+}
+
+function MisTransacciones({ user, onUser }) {
   const [l, setL] = useState([]);
   useEffect(() => { api.misTransacciones().then((r) => setL(r.transacciones)); }, []);
   return (
     <div className="space-y-2 p-4">
-      <h1 className="text-xl font-bold">Mis plazas</h1>
+      <MiCoche user={user} onUser={onUser} />
+      <h1 className="pt-2 text-xl font-bold">Mis plazas</h1>
       {!l.length && <p className="text-gray-500">Aún no tienes transacciones.</p>}
       {l.map((t) => (
         <NavLink key={t.id} to={`/transaccion/${t.id}`} className="block rounded-lg border bg-white p-3">
@@ -58,7 +82,7 @@ export default function App() {
         <Route path="/transaccion/:id" element={<Transaccion user={user} />} />
         {user.is_admin && <Route path="/admin" element={<Admin />} />}
         <Route path="/saldo" element={<Saldo />} />
-        <Route path="/mis" element={<MisTransacciones />} />
+        <Route path="/mis" element={<MisTransacciones user={user} onUser={setUser} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {aviso && (

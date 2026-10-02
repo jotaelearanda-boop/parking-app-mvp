@@ -48,8 +48,15 @@ export default function Transaccion({ user }) {
 
       {!soyVendedor && tx.lat && <>
         <Mapa center={{ lat: tx.lat, lng: tx.lng }} markers={[{ id: 'p', lat: tx.lat, lng: tx.lng, label: 'P' }]} className="h-56 w-full" />
-        <img src={tx.foto_matricula_url} alt="Matrícula" className="max-h-40 rounded" />
       </>}
+
+      {tx.otro && (
+        <div className="rounded-lg border bg-white p-3">
+          <p className="text-xs text-gray-500">{soyVendedor ? 'Quien viene a tu plaza' : 'Tu vendedor'} · {tx.otro.name}</p>
+          <p className="text-lg font-bold">{tx.otro.modelo} · {tx.otro.color}</p>
+          <p className="mt-1 inline-block rounded border-2 border-gray-800 bg-yellow-50 px-3 py-1 font-mono text-xl font-bold tracking-widest">{tx.otro.matricula}</p>
+        </div>
+      )}
 
       {!soyVendedor && tx.estado === 'pendiente_pago' && <>
         {clientSecret

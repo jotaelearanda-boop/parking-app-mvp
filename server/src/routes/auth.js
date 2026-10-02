@@ -7,7 +7,15 @@ import { signToken, requireAuth } from '../middleware/auth.js';
 const r = Router();
 const publico = ({ password_hash, stripe_account_id, ...u }) => u;
 
-const registroSchema = z.object({
+// Matrícula: se normaliza a mayúsculas sin espacios/guiones (cubre formato nuevo 1234BCD, antiguo A1234BC y extranjeras).
+const vehiculoSchema = z.object({
+  vehiculo_modelo: z.string().trim().min(2, 'Indica el modelo').max(40),
+  vehiculo_color: z.string().trim().min(3, 'Indica el color').max(20),
+  vehiculo_matricula: z.string().trim().transform((v) => v.toUpperCase().replace(/[\s-]/g, ''))
+    .refine((v) => /^[A-Z0-9]{4,10}$/.test(v), 'Matrícula no válida'),
+});
+
+const registroSchema = vehiculoSchema.extend({
   email: z.string().email(),
   phone: z.string().regex(/^\+?[0-9 ]{9,15}$/, 'Teléfono inválido'),
   name: z.string().min(2).max(60),
@@ -17,12 +25,13 @@ const registroSchema = z.object({
 r.post('/registro', async (req, res) => {
   const p = registroSchema.safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
-  const { email, phone, name, password } = p.data;
+  const { email, phone, name, password, vehiculo_modelo, vehiculo_color, vehiculo_matricula } = p.data;
   try {
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await query(
-      `insert into users(email, phone, name, password_hash) values (lower($1),$2,$3,$4) returning *`,
-      [email, phone, name, hash]);
+      `insert into users(email, phone, name, password_hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula)
+       values (lower($1),$2,$3,$4,$5,$6,$7) returning *`,
+      [email, phone, name, hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula]);
     // TODO semana 3: enviar código de verificación por email/SMS (proveedor por decidir)
     res.status(201).json({ token: signToken(rows[0]), user: publico(rows[0]) });
   } catch (e) {
@@ -38,6 +47,15 @@ r.post('/login', async (req, res) => {
   if (!u || !(await bcrypt.compare(String(password ?? ''), u.password_hash)))
     return res.status(401).json({ error: 'Credenciales incorrectas' });
   res.json({ token: signToken(u), user: publico(u) });
+});
+
+r.put('/vehiculo', requireAuth, async (req, res) => {
+  const p = vehiculoSchema.safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
+  const { rows } = await query(
+    'update users set vehiculo_modelo=$1, vehiculo_color=$2, vehiculo_matricula=$3 where id=$4 returning *',
+    [p.data.vehiculo_modelo, p.data.vehiculo_color, p.data.vehiculo_matricula, req.user.id]);
+  res.json({ user: publico(rows[0]) });
 });
 
 r.get('/yo', requireAuth, (req, res) => res.json({ user: publico(req.user) }));

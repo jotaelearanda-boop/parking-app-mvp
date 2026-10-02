@@ -7,6 +7,9 @@ export const env = {
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: need('JWT_SECRET'),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+  // Zona piloto: Benalúa (calle Aloná + García Andreu, Alicante).
+  zona: { lat: 38.3414, lng: -0.4963, radioM: Number(process.env.ZONA_RADIO_M ?? 700),
+          estricta: (process.env.ZONA_ESTRICTA ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')) === 'true' },
   comisionPct: Number(process.env.COMISION_PCT ?? 20),
   stripeKey: process.env.STRIPE_SECRET_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
