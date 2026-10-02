@@ -2,11 +2,14 @@
 export const getToken = () => localStorage.getItem('token');
 export const setSession = (token) => token ? localStorage.setItem('token', token) : localStorage.removeItem('token');
 
+// En producción VITE_API_URL apunta al backend (Railway); en local se usa el proxy de Vite.
+export const API_URL = import.meta.env.VITE_API_URL ?? '';
+
 async function req(path, { method = 'GET', body, form } = {}) {
   const headers = {};
   if (getToken()) headers.Authorization = `Bearer ${getToken()}`;
   if (body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`/api${path}`, { method, headers, body: form ?? (body && JSON.stringify(body)) });
+  const res = await fetch(`${API_URL}/api${path}`, { method, headers, body: form ?? (body && JSON.stringify(body)) });
   if (res.status === 204) return null;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(data.error ?? `Error ${res.status}`), { codigo: data.codigo });

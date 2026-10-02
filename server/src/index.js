@@ -13,6 +13,7 @@ import { iniciarJobs } from './jobs.js';
 import plazasRoutes from './routes/plazas.js';
 
 export const app = express();
+app.set('trust proxy', 1); // detrás del proxy de Railway: IP real para el rate-limit
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: env.clientOrigin }));
 // El webhook de Stripe necesita el cuerpo crudo: va ANTES de express.json.

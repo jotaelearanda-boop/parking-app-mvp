@@ -1,5 +1,5 @@
 // Conexión WebSocket con reconexión simple. Los listeners reciben {tipo, ...datos}.
-import { getToken } from './api.js';
+import { API_URL, getToken } from './api.js';
 
 const listeners = new Set();
 let socket, timer;
@@ -7,7 +7,7 @@ let socket, timer;
 export function conectarWs() {
   if (!getToken() || socket) return;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const host = import.meta.env.VITE_WS_URL ?? `${proto}://${location.host}/ws`;
+  const host = API_URL ? `${API_URL.replace(/^http/, 'ws')}/ws` : `${proto}://${location.host}/ws`;
   socket = new WebSocket(`${host}?token=${getToken()}`);
   socket.onmessage = (e) => { try { const m = JSON.parse(e.data); listeners.forEach((l) => l(m)); } catch {} };
   socket.onclose = () => { socket = null; clearTimeout(timer); if (getToken()) timer = setTimeout(conectarWs, 3000); };
