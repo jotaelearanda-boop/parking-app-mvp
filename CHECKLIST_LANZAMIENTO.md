@@ -27,6 +27,10 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 - [ ] Decidir cuándo pasar a modo **live** (claves `sk_live_` / `pk_live_`, Connect en live) — requiere verificar la cuenta de Stripe.
 - [ ] Probar la retirada de saldo con el alta (KYC) de un vendedor de prueba.
 
+## Entornos de Stripe (importante)
+- La app usa las claves del sandbox **"Entorno de prueba de App_Parking"** (`acct_1ULlr1ROOi0SReSi`). El panel `acct_1UM4SVIxbH3x3qkI` es otro entorno (cuenta principal). Toda la configuración (webhooks, dominios de Apple Pay, Connect) debe hacerse **en el entorno de las claves**, o por API con la `sk_test`.
+- [ ] Al pasar a modo live, repetir todo en la cuenta principal: claves live, webhook live, dominio para Apple Pay/Google Pay, Connect.
+
 ## Google Maps
 - [x] Dominio de Vercel añadido a la clave de Maps. Pendiente: quitar `localhost` de las restricciones antes del lanzamiento público.
 

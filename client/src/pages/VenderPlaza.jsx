@@ -32,7 +32,7 @@ export default function VenderPlaza({ onPublicada }) {
 
   if (!pos) return (
     <button onClick={aparcado} className="w-full rounded-xl bg-blue-600 p-5 text-lg font-bold text-white">
-      📍 Acabo de aparcar · Vender mi plaza
+      📍 Vender mi plaza
     </button>);
 
   return (
