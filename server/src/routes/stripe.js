@@ -13,18 +13,24 @@ export const router = Router();
 router.post('/onboarding', requireAuth, requireStripe, async (req, res) => {
   let acct = req.user.stripe_account_id;
   if (!acct) {
-    const a = await stripe.accounts.create({
-      type: 'express', country: 'ES', email: req.user.email,
-      capabilities: { transfers: { requested: true } },
-      business_type: 'individual',
+    // Accounts v2: cuenta "recipient" que solo recibe transferencias de la plataforma.
+    // La plataforma asume pérdidas (losses_collector=application); Stripe verifica la identidad (KYC).
+    const a = await stripe.v2.core.accounts.create({
+      contact_email: req.user.email, display_name: req.user.name, dashboard: 'express',
+      identity: { country: 'es', entity_type: 'individual' },
+      defaults: { currency: 'eur', locales: ['es-ES'],
+        responsibilities: { fees_collector: 'application', losses_collector: 'application' } },
+      configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } } },
       metadata: { user_id: req.user.id },
     });
     acct = a.id;
     await query('update users set stripe_account_id=$1 where id=$2', [acct, req.user.id]);
   }
-  const link = await stripe.accountLinks.create({
-    account: acct, type: 'account_onboarding',
-    return_url: `${env.clientOrigin}/saldo?stripe=ok`, refresh_url: `${env.clientOrigin}/saldo?stripe=reintentar`,
+  const link = await stripe.v2.core.accountLinks.create({
+    account: acct,
+    use_case: { type: 'account_onboarding', account_onboarding: {
+      return_url: `${env.clientOrigin}/saldo?stripe=ok`, refresh_url: `${env.clientOrigin}/saldo?stripe=reintentar`,
+    } },
   });
   res.json({ url: link.url });
 });
@@ -33,8 +39,8 @@ router.post('/onboarding', requireAuth, requireStripe, async (req, res) => {
 export async function vendedorListo(user) {
   if (!stripe) return true; // modo dev sin Stripe
   if (!user.stripe_account_id) return false;
-  const a = await stripe.accounts.retrieve(user.stripe_account_id);
-  return a.capabilities?.transfers === 'active';
+  const a = await stripe.v2.core.accounts.retrieve(user.stripe_account_id, { include: ['configuration.recipient'] });
+  return a.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status === 'active';
 }
 
 router.get('/estado', requireAuth, async (req, res) => {

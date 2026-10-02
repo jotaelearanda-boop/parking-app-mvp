@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { notify } from '../ws.js';
 import { stripe } from '../config/stripe.js';
 import { moverSaldo } from '../config/saldo.js';
+import { liberarAlVendedor } from '../config/liquidar.js';
 
 const r = Router();
 r.use(requireAuth);
@@ -106,24 +107,58 @@ r.post('/:id/llegue', cargar, async (req, res) => {
   res.json({ ok: true });
 });
 
-// Vendedor se va → libera fondos (transfer Stripe en semana 3) y programa borrado de ubicación (RGPD).
+// Vendedor se va → el dinero pasa a su saldo (neto de comisión) y se programa el borrado de ubicación (RGPD).
 r.post('/:id/salgo', cargar, async (req, res) => {
   if (req.user.id !== req.tx.vendedor_id || req.tx.estado !== 'en_escrow')
     return res.status(409).json({ error: 'Acción no permitida' });
-  // El vendedor cobra en su saldo (neto de comisión). Atómico con el cambio de estado.
+  const t = await liberarAlVendedor(req.tx.id, { porSalida: true });
+  t ? res.json({ ok: true }) : res.status(409).json({ error: 'Ya liberada' });
+});
+
+// Comprador reporta un problema ("no había plaza"). Bloquea la liberación hasta que un admin resuelva;
+// si pasan 24 h sin resolución, el job reembolsa automáticamente.
+r.post('/:id/disputa', cargar, async (req, res) => {
+  const p = z.object({ motivo: z.string().trim().min(3).max(500) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Indica el motivo' });
+  if (req.user.id !== req.tx.comprador_id || req.tx.estado !== 'en_escrow')
+    return res.status(409).json({ error: 'Solo puedes reportar una compra pagada y aún no liberada' });
+  const up = await query("update transacciones set estado='disputada' where id=$1 and estado='en_escrow'", [req.tx.id]);
+  if (!up.rowCount) return res.status(409).json({ error: 'No se puede reportar' });
+  await query('insert into disputas(transaccion_id, reportada_por, motivo) values ($1,$2,$3)', [req.tx.id, req.user.id, p.data.motivo]);
+  notify(req.tx.vendedor_id, 'disputa_abierta', { transaccion_id: req.tx.id });
+  res.status(201).json({ ok: true });
+});
+
+// Valoración 1-5 de la otra parte, solo tras completarse. Actualiza reputación y aplica avisos/suspensiones.
+r.post('/:id/rating', cargar, async (req, res) => {
+  const p = z.object({ estrellas: z.coerce.number().int().min(1).max(5) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Valoración de 1 a 5' });
+  if (req.tx.estado !== 'liberada') return res.status(409).json({ error: 'Solo se valora una transacción completada' });
+  const destino = otro(req.tx, req.user.id);
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const up = await client.query(
-      `update transacciones set estado='liberada', vendedor_salio_at=now(), location_purge_at=now() + interval '1 hour'
-        where id=$1 and estado='en_escrow'`, [req.tx.id]);
-    if (!up.rowCount) { await client.query('rollback'); return res.status(409).json({ error: 'Ya liberada' }); }
-    await moverSaldo(client, req.tx.vendedor_id, 'venta', req.tx.monto_cents - req.tx.comision_cents, { transaccionId: req.tx.id });
+    await client.query('insert into ratings(transaccion_id, autor_id, destino_id, estrellas) values ($1,$2,$3,$4)',
+      [req.tx.id, req.user.id, destino, p.data.estrellas]);
+    const { rows } = await client.query(
+      `update users set rating_count = rating_count + 1,
+              rating_avg = round(((rating_avg * rating_count) + $2) / (rating_count + 1), 2)
+        where id=$1 returning rating_avg, rating_count`, [destino, p.data.estrellas]);
+    const { rating_avg, rating_count } = rows[0];
+    // Reglas de confianza: tras 3 valoraciones, <3 ★ = aviso; <2 ★ = suspensión temporal de 7 días.
+    if (rating_count >= 3 && rating_avg < 2)
+      await client.query("update users set suspended_until = now() + interval '7 days' where id=$1", [destino]);
+    else if (rating_count >= 3 && rating_avg < 3)
+      await client.query('update users set advertido_at = now() where id=$1', [destino]);
     await client.query('commit');
-  } catch (e) { await client.query('rollback'); throw e; } finally { client.release(); }
-  await query(`update plazas_activas set estado='completada' where id=$1`, [req.tx.plaza_id]);
-  notify(req.tx.comprador_id, 'plaza_lista', { transaccion_id: req.tx.id });
-  res.json({ ok: true });
+    if (rating_count >= 3 && rating_avg < 3)
+      notify(destino, 'aviso_reputacion', { transaccion_id: req.tx.id, suspendido: rating_avg < 2 });
+    res.status(201).json({ ok: true });
+  } catch (e) {
+    await client.query('rollback');
+    if (e.code === '23505') return res.status(409).json({ error: 'Ya has valorado esta transacción' });
+    throw e;
+  } finally { client.release(); }
 });
 
 // Chat simple por transacción (histórico + WebSocket).

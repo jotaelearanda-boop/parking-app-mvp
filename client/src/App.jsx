@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import Transaccion from './pages/Transaccion.jsx';
+import Admin from './pages/Admin.jsx';
 import Saldo from './pages/Saldo.jsx';
 import Auth from './pages/Auth.jsx';
 import BuscarPlaza from './pages/BuscarPlaza.jsx';
@@ -31,7 +32,7 @@ export default function App() {
   const nav = useNavigate();
   const TEXTOS = {
     comprador_interesado: 'Tienes un comprador interesado', plaza_pagada: 'Plaza pagada: ya puedes avisar de tu salida',
-    saldo_recargado: 'Saldo recargado', pago_confirmado: 'Pago confirmado', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
+    saldo_recargado: 'Saldo recargado', disputa_abierta: 'El comprador ha reportado un problema', reembolsado: 'Importe reembolsado', aviso_reputacion: 'Aviso: tu valoración media es baja', pago_confirmado: 'Pago confirmado', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
   };
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="/" element={<BuscarPlaza />} />
         <Route path="/vender" element={<VenderPlaza />} />
         <Route path="/transaccion/:id" element={<Transaccion user={user} />} />
+        {user.is_admin && <Route path="/admin" element={<Admin />} />}
         <Route path="/saldo" element={<Saldo />} />
         <Route path="/mis" element={<MisTransacciones />} />
         <Route path="*" element={<Navigate to="/" />} />
@@ -68,6 +70,7 @@ export default function App() {
         <NavLink to="/vender" className={tab}>Vender</NavLink>
         <NavLink to="/mis" className={tab}>Mis plazas</NavLink>
         <NavLink to="/saldo" className={tab}>Saldo</NavLink>
+        {user.is_admin && <NavLink to="/admin" className={tab}>Admin</NavLink>}
         <button className="flex-1 p-3 text-gray-500" onClick={() => { cerrarWs(); setSession(null); setUser(null); }}>Salir</button>
       </nav>
     </div>

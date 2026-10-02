@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
+import Rating from '../components/Rating.jsx';
 import Pago from '../components/Pago.jsx';
 import Mapa from '../components/Mapa.jsx';
 import { api } from '../services/api.js';
@@ -58,7 +59,16 @@ export default function Transaccion({ user }) {
       </>}
       {!soyVendedor && tx.estado === 'en_escrow' && !tx.comprador_llego_at && <button className={btn} onClick={accion(api.llegue)}>He llegado</button>}
       {soyVendedor && tx.estado === 'en_escrow' && <button className={btn} onClick={accion(api.salgo)}>SALGO (liberar plaza)</button>}
-      {tx.estado === 'liberada' && <p className="font-semibold text-green-700">✅ Plaza liberada. (Rating: próximamente)</p>}
+      {!soyVendedor && tx.estado === 'en_escrow' && (
+        <button className="w-full rounded-lg border border-red-300 p-3 text-red-700"
+          onClick={() => { const m = prompt('¿Qué ha pasado? (p. ej. "No había plaza")'); if (m) api.disputa(id, m).then(cargar).catch((e) => setErr(e.message)); }}>
+          Reportar problema</button>)}
+      {tx.estado === 'disputada' && <p className="rounded bg-yellow-50 p-2">Problema reportado. Si no se resuelve en 24 h se reembolsa automáticamente.</p>}
+      {tx.estado === 'reembolsada' && <p className="rounded bg-yellow-50 p-2">Importe reembolsado.</p>}
+      {tx.estado === 'liberada' && <>
+        <p className="font-semibold text-green-700">✅ Plaza liberada.</p>
+        <Rating onSelect={(n) => api.rating(id, n).catch((e) => { setErr(e.message); throw e; })} />
+      </>}
 
       <div className="rounded-lg border bg-white p-2">
         <div className="max-h-48 space-y-1 overflow-y-auto">

@@ -8,6 +8,8 @@ import transaccionesRoutes from './routes/transacciones.js';
 import { attachWs } from './ws.js';
 import { router as stripeRoutes, webhook } from './routes/stripe.js';
 import saldoRoutes from './routes/saldo.js';
+import adminRoutes from './routes/admin.js';
+import { iniciarJobs } from './jobs.js';
 import plazasRoutes, { UPLOAD_DIR } from './routes/plazas.js';
 
 export const app = express();
@@ -22,6 +24,7 @@ app.get('/health', (_q, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: 20 }), authRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/saldo', saldoRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/plazas', plazasRoutes);
 app.use('/api/transacciones', transaccionesRoutes);
 
@@ -33,4 +36,5 @@ app.use((err, _q, res, _n) => {
 if (process.argv[1]?.endsWith('index.js')) {
   const server = app.listen(env.port, () => console.log(`API en :${env.port}`));
   attachWs(server);
+  iniciarJobs();
 }

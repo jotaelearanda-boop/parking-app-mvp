@@ -20,10 +20,31 @@ Marketplace P2P para vender/comprar plazas de aparcamiento gratuitas. Zona pilot
    ```
    Abre http://localhost:5173 (el proxy de Vite reenvía `/api` al puerto 4000).
 
+## Pagos (Stripe, modo test)
+1. En `server/.env`: `STRIPE_SECRET_KEY=sk_test_...` (solo servidor, nunca en git).
+2. Activa Connect en el Dashboard de Stripe y acepta las responsabilidades en Ajustes → Connect → Perfil de la plataforma.
+3. Webhooks en local con la Stripe CLI (cada vez que reinicies el equipo):
+   ```bash
+   STRIPE_API_KEY=<tu sk_test> stripe listen --events payment_intent.succeeded,payment_intent.payment_failed \
+     --forward-to localhost:4000/api/stripe/webhook
+   ```
+   Copia el `whsec_...` que imprime a `STRIPE_WEBHOOK_SECRET` en `server/.env`.
+4. Tarjeta de prueba: `4242 4242 4242 4242`, cualquier fecha futura y CVC.
+
+Modelo: el comprador paga a la plataforma (escrow) o con **saldo** interno. Al pulsar "SALGO" el vendedor recibe su parte
+(precio − 20 %) en **saldo**; puede usarlo para comprar plazas o retirarlo (alta Stripe Connect con verificación, solo al retirar).
+Apple Pay / Google Pay aparecen solos en HTTPS con dominio verificado en Stripe (no en `localhost`).
+
+## Tareas automáticas (`server/src/jobs.js`, cada minuto)
+Caducar plazas · cancelar reservas sin pagar tras 10 min · reembolsar disputas sin resolver tras 24 h · borrar ubicación y foto 1 h tras cerrar (RGPD).
+
+## Admin
+Marca un usuario como admin: `update users set is_admin = true where email = '...';` — verá la pestaña **Admin** (métricas y disputas).
+
 ## Seguridad
 - `.env*` nunca se sube a git. `STRIPE_SECRET_KEY` solo en el servidor.
 - Restringe la clave de Google Maps por dominio (HTTP referrer) en Google Cloud.
 
-## Estado (semana 1)
-Auth JWT, esquema PostGIS, publicar/buscar plazas con foto de matrícula, mapa, PWA.
-Pendiente: chat WebSocket, Stripe Connect + escrow, ratings, notificaciones, admin, deploy.
+## Estado
+Hecho: auth, plazas con PostGIS, mapa, chat y avisos WebSocket, pagos Stripe + saldo, ratings con suspensión, disputas, jobs RGPD, admin.
+Pendiente: subida de fotos a almacenamiento persistente, deploy (Vercel + Railway), QA y beta.
