@@ -5,6 +5,8 @@ import { permiso, requireStaff } from '../middleware/staff.js';
 import { liberarAlVendedor, reembolsar } from '../config/liquidar.js';
 import { pool } from '../config/db.js';
 import { moverSaldo } from '../config/saldo.js';
+import { notify } from '../ws.js';
+import { evento } from '../config/audit.js';
 
 const r = Router();
 r.use(requireStaff);
@@ -190,6 +192,49 @@ r.delete('/zonas/:id', permiso('zonas'), async (req, res) => {
   if (!rowCount) return res.status(404).json({ error: 'Zona no encontrada' });
   await log(req.user.id, 'borrar_zona', 'zona', req.params.id);
   res.status(204).end();
+});
+
+// ---------- Retiradas de saldo (solo superadmin) ----------
+r.get('/retiradas', permiso('retiradas'), async (req, res) => {
+  const estado = String(req.query.estado ?? 'pendiente');
+  const { rows } = await query(
+    `select t.id, t.importe_cents, t.metodo, t.telefono, t.iban, t.titular, t.estado, t.referencia, t.motivo_rechazo, t.solicitada_at, t.resuelta_at,
+            u.name, u.email, u.phone as telefono_cuenta
+       from retiradas t join users u on u.id=t.user_id
+      where $1 = '' or t.estado = $1 order by (t.estado='pendiente') desc, t.solicitada_at desc limit 200`, [estado]);
+  await log(req.user.id, 'ver_retiradas', 'retiradas', null, { estado, n: rows.length });   // contiene IBAN: queda registrado
+  res.json({ retiradas: rows });
+});
+
+r.post('/retiradas/:id/pagar', permiso('retiradas'), async (req, res) => {
+  const referencia = String(req.body?.referencia ?? '').trim().slice(0, 100) || null;
+  const { rows } = await query(
+    `update retiradas set estado='pagada', referencia=$2, resuelta_at=now(), resuelta_por=$3 where id=$1 and estado='pendiente' returning user_id, importe_cents`,
+    [req.params.id, referencia, req.user.id]);
+  if (!rows[0]) return res.status(409).json({ error: 'La retirada ya no está pendiente' });
+  await log(req.user.id, 'pagar_retirada', 'retirada', req.params.id, { importe_cents: rows[0].importe_cents, referencia });
+  evento('retirada_pagada', { userId: rows[0].user_id, data: { id: req.params.id, importe: rows[0].importe_cents } });
+  notify(rows[0].user_id, 'retirada_pagada', {});
+  res.json({ ok: true });
+});
+
+r.post('/retiradas/:id/rechazar', permiso('retiradas'), async (req, res) => {
+  const p = z.object({ motivo: z.string().trim().min(3).max(300) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Indica el motivo del rechazo' });
+  const c = await pool.connect();
+  try {
+    await c.query('begin');
+    const { rows } = await c.query(
+      `update retiradas set estado='rechazada', motivo_rechazo=$2, resuelta_at=now(), resuelta_por=$3 where id=$1 and estado='pendiente' returning user_id, importe_cents`,
+      [req.params.id, p.data.motivo, req.user.id]);
+    if (!rows[0]) { await c.query('rollback'); return res.status(409).json({ error: 'La retirada ya no está pendiente' }); }
+    await moverSaldo(c, rows[0].user_id, 'reembolso', rows[0].importe_cents, { stripeRef: `retirada-rechazada-${req.params.id}` });   // el saldo vuelve al usuario
+    await c.query('commit');
+    await log(req.user.id, 'rechazar_retirada', 'retirada', req.params.id, { importe_cents: rows[0].importe_cents, motivo: p.data.motivo });
+    evento('retirada_rechazada', { userId: rows[0].user_id, data: { id: req.params.id, motivo: p.data.motivo } });
+    notify(rows[0].user_id, 'retirada_rechazada', {});
+    res.json({ ok: true });
+  } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
 });
 
 // ---------- Auditoría ----------

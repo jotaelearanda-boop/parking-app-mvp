@@ -6,7 +6,7 @@ import { env } from './config/env.js';
 import authRoutes from './routes/auth.js';
 import transaccionesRoutes from './routes/transacciones.js';
 import { attachWs } from './ws.js';
-import { router as stripeRoutes, webhook } from './routes/stripe.js';
+import { webhook } from './routes/stripe.js';
 import saldoRoutes from './routes/saldo.js';
 import adminRoutes from './routes/admin.js';
 import backofficeRoutes from './routes/backoffice.js';
@@ -23,7 +23,6 @@ app.use(express.json({ limit: '100kb' }));
 
 app.get('/health', (_q, res) => res.json({ ok: true }));
 app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: 20 }), authRoutes);
-app.use('/api/stripe', stripeRoutes);
 app.use('/api/saldo', saldoRoutes);
 app.use('/api/backoffice', backofficeRoutes);
 app.use('/api/admin', adminRoutes);

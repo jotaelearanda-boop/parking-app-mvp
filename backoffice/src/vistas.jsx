@@ -45,7 +45,7 @@ function Usuarios({ can }) {
             <h2 className="text-lg font-bold">{u.name}</h2>
             {u.is_admin && <Etiqueta color="bg-purple-100 text-purple-800">Admin</Etiqueta>}
             {suspendido(u) && <Etiqueta color="bg-red-100 text-red-800">Suspendido hasta {fecha(u.suspended_until)}</Etiqueta>}
-            {u.tiene_stripe && <Etiqueta color="bg-green-100 text-green-800">Cobros verificados</Etiqueta>}
+            
           </div>
           <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm md:grid-cols-2">
             <div><dt className="inline text-gray-500">Email: </dt><dd className="inline">{u.email}</dd></div>
@@ -202,6 +202,46 @@ function Zonas() {
     </div>);
 }
 
+// ------------------------------------------------------------------ Retiradas de saldo
+export function Retiradas({ can }) {
+  const aviso = useToast();
+  const [estado, setEstado] = useState('pendiente');
+  const [l, setL] = useState([]);
+  const cargar = useCallback(() => api.adminRetiradas(estado).then((r) => setL(r.retiradas)).catch((e) => aviso(e.message, 'error')), [estado, aviso]);
+  useEffect(() => { cargar(); }, [cargar]);
+  const copiar = (t) => navigator.clipboard?.writeText(t).then(() => aviso('Copiado', 'ok'));
+  const pagar = (r) => { const ref = prompt('Referencia del pago (opcional):', ''); if (ref === null) return; api.adminPagarRetirada(r.id, ref).then(() => { aviso('Marcada como pagada', 'ok'); cargar(); }).catch((e) => aviso(e.message, 'error')); };
+  const rechazar = (r) => { const m = prompt('Motivo del rechazo (el saldo vuelve al usuario):'); if (!m) return; api.adminRechazarRetirada(r.id, m).then(() => { aviso('Rechazada: saldo devuelto', 'ok'); cargar(); }).catch((e) => aviso(e.message, 'error')); };
+  return (
+    <div className="space-y-3">
+      <p className="rounded-lg bg-blue-50 p-3 text-sm">Paga primero desde tu banco (Bizum o transferencia) y luego pulsa <b>Marcar como pagada</b>. Si algo no cuadra, <b>Rechazar</b> devuelve el saldo al usuario. Cada vez que abres esta lista queda registrado, porque contiene IBAN.</p>
+      <select className="rounded-lg border p-2" value={estado} onChange={(e) => setEstado(e.target.value)}>
+        <option value="pendiente">Pendientes</option><option value="pagada">Pagadas</option><option value="rechazada">Rechazadas</option><option value="">Todas</option>
+      </select>
+      {!l.length && <p className="text-gray-500">No hay retiradas.</p>}
+      {l.map((r) => (
+        <div key={r.id} className="space-y-1 rounded-xl border bg-white p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <b className="text-lg">{eur(r.importe_cents)}</b>
+            <Etiqueta color={r.metodo === 'bizum' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>{r.metodo === 'bizum' ? 'Bizum' : 'Transferencia'}</Etiqueta>
+            <Etiqueta color={r.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : r.estado === 'rechazada' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}>{r.estado}</Etiqueta>
+            <span className="ml-auto text-sm text-gray-500">{fecha(r.solicitada_at)}</span>
+          </div>
+          <p className="text-sm">{r.name} · {r.email}</p>
+          {r.metodo === 'bizum'
+            ? <p className="text-sm">Bizum al <b className="font-mono">{r.telefono}</b> <button className="ml-1 text-blue-600" onClick={() => copiar(r.telefono)}>copiar</button></p>
+            : <p className="text-sm">IBAN <b className="font-mono">{r.iban}</b> <button className="ml-1 text-blue-600" onClick={() => copiar(r.iban)}>copiar</button> · titular <b>{r.titular}</b></p>}
+          {r.referencia && <p className="text-xs text-gray-500">Referencia: {r.referencia}</p>}
+          {r.motivo_rechazo && <p className="text-xs text-gray-500">Motivo: {r.motivo_rechazo}</p>}
+          {r.estado === 'pendiente' && can('retiradas') && (
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => pagar(r)} className="flex-[2] rounded-lg bg-green-600 p-2 font-semibold text-white">Marcar como pagada</button>
+              <button onClick={() => rechazar(r)} className="flex-1 rounded-lg border border-red-300 p-2 text-red-700">Rechazar</button>
+            </div>)}
+        </div>))}
+    </div>);
+}
+
 // ------------------------------------------------------------------ Auditoría (acciones del equipo)
 export function Auditoria() {
   const [l, setL] = useState([]);
@@ -277,7 +317,7 @@ export function Equipo({ yo }) {
 // ------------------------------------------------------------------ Contenedor
 const TABS = [
   ['resumen', 'Resumen', Resumen, 'ver'], ['usuarios', 'Usuarios', Usuarios, 'ver'], ['reclamaciones', 'Reclamaciones', Reclamaciones, 'ver'],
-  ['transacciones', 'Transacciones', Transacciones, 'ver'], ['zonas', 'Zonas', Zonas, 'zonas'],
+  ['transacciones', 'Transacciones', Transacciones, 'ver'], ['retiradas', 'Retiradas', Retiradas, 'retiradas'], ['zonas', 'Zonas', Zonas, 'zonas'],
   ['auditoria', 'Auditoría', Auditoria, 'auditoria'], ['eventos', 'Eventos', Eventos, 'auditoria'], ['equipo', 'Equipo', Equipo, 'equipo'],
 ];
 

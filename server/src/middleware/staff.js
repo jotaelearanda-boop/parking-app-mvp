@@ -7,7 +7,7 @@ export const signBackofficeToken = (user) => jwt.sign({ sub: user.id, rol: user.
 
 // Qué puede hacer cada rol.
 const PERMISOS = {
-  superadmin: ['ver', 'reclamaciones', 'suspender', 'ajuste_saldo', 'zonas', 'auditoria', 'equipo'],
+  superadmin: ['ver', 'reclamaciones', 'suspender', 'ajuste_saldo', 'zonas', 'auditoria', 'equipo', 'retiradas'],
   gestor: ['ver', 'reclamaciones', 'suspender'],
 };
 

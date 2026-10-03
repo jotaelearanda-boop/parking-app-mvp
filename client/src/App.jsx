@@ -37,7 +37,7 @@ export default function App() {
   const location = useLocation();
   const TEXTOS = {
     comprador_interesado: 'Tienes un comprador interesado', plaza_pagada: 'Plaza pagada: ya puedes avisar de tu salida',
-    saldo_recargado: 'Saldo recargado', disputa_abierta: 'El comprador ha reportado un problema', reembolsado: 'Importe reembolsado', aviso_reputacion: 'Aviso: tu valoración media es baja', pago_confirmado: 'Pago confirmado', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
+    saldo_recargado: 'Saldo recargado', disputa_abierta: 'El comprador ha reportado un problema', reembolsado: 'Importe reembolsado', aviso_reputacion: 'Aviso: tu valoración media es baja', pago_confirmado: 'Pago confirmado', retirada_pagada: 'Tu retirada ha sido pagada', retirada_rechazada: 'Tu retirada no se pudo pagar: el saldo ha vuelto a tu cuenta', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
   };
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function App() {
         <Route path="/vender" element={<Navigate to="/coche" replace />} />
         <Route path="/mis" element={<Navigate to="/coche" replace />} />
         <Route path="/transaccion/:id" element={<Transaccion user={user} />} />
-        <Route path="/saldo" element={<Saldo />} />
+        <Route path="/saldo" element={<Saldo user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {aviso && (

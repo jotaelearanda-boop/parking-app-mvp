@@ -33,6 +33,9 @@ export const api = {
   adminBorrarZona: (id) => req(`/admin/zonas/${id}`, { method: 'DELETE' }),
   adminLog: (http = false) => req(`/admin/log${http ? '?http=1' : ''}`),
   adminEventos: (tipo = '') => req(`/admin/eventos?tipo=${encodeURIComponent(tipo)}`),
+  adminRetiradas: (estado = 'pendiente') => req(`/admin/retiradas?estado=${estado}`),
+  adminPagarRetirada: (id, referencia) => req(`/admin/retiradas/${id}/pagar`, { method: 'POST', body: { referencia } }),
+  adminRechazarRetirada: (id, motivo) => req(`/admin/retiradas/${id}/rechazar`, { method: 'POST', body: { motivo } }),
   adminEquipo: () => req('/admin/equipo'),
   adminCambiarRol: (email, rol) => req('/admin/equipo', { method: 'POST', body: { email, rol } }),
 };

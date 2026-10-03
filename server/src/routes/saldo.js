@@ -4,7 +4,6 @@ import { pool, query } from '../config/db.js';
 import { stripe, requireStripe } from '../config/stripe.js';
 import { requireAuth } from '../middleware/auth.js';
 import { moverSaldo, SALDO_MAX_CENTS, RECARGA_MIN_CENTS, RETIRADA_MIN_CENTS } from '../config/saldo.js';
-import { vendedorListo } from './stripe.js';
 import { evento } from '../config/audit.js';
 
 const r = Router();
@@ -16,7 +15,7 @@ r.get('/', async (req, res) => {
   res.json({
     saldo_cents: req.user.saldo_cents, movimientos: rows,
     limites: { recarga_min: RECARGA_MIN_CENTS, saldo_max: SALDO_MAX_CENTS, retirada_min: RETIRADA_MIN_CENTS },
-    cobros_listos: await vendedorListo(req.user),
+    retirada_pendiente: (await query("select id, importe_cents, metodo, solicitada_at from retiradas where user_id=$1 and estado='pendiente'", [req.user.id])).rows[0] ?? null,
   });
 });
 
@@ -33,28 +32,52 @@ r.post('/recargar', requireStripe, async (req, res) => {
   res.status(201).json({ client_secret: pi.client_secret });
 });
 
-// Retirada del saldo a la cuenta bancaria vía Stripe Connect (requiere alta con verificación).
-r.post('/retirar', requireStripe, async (req, res) => {
-  const { saldo_cents, stripe_account_id } = req.user;
-  if (saldo_cents < RETIRADA_MIN_CENTS)
-    return res.status(409).json({ error: `Mínimo para retirar: ${RETIRADA_MIN_CENTS / 100} €` });
-  if (!(await vendedorListo(req.user)))
-    return res.status(402).json({ error: 'Completa la verificación de cobros para retirar', codigo: 'stripe_onboarding' });
+// --- Retiradas: sin cuenta de Stripe. El usuario indica Bizum o IBAN; el equipo la paga desde el backoffice. ---
+function ibanValido(texto) {
+  const iban = String(texto ?? '').replace(/\s/g, '').toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return null;
+  const reordenado = iban.slice(4) + iban.slice(0, 4);
+  let resto = 0;
+  for (const ch of reordenado) resto = Number(String(resto) + String(ch >= 'A' ? ch.charCodeAt(0) - 55 : ch)) % 97;
+  return resto === 1 ? iban : null;                                   // comprobación mod-97 del IBAN
+}
+const telefonoBizum = (t) => {
+  const n = String(t ?? '').replace(/[\s.-]/g, '').replace(/^(\+34|0034)/, '');
+  return /^[67]\d{8}$/.test(n) ? n : null;                           // móvil español (Bizum)
+};
+
+r.post('/retirar', async (req, res) => {
+  const b = req.body ?? {};
+  let destino;
+  if (b.metodo === 'bizum') {
+    const tel = telefonoBizum(b.telefono);
+    if (!tel) return res.status(400).json({ error: 'Introduce un móvil español válido para el Bizum' });
+    destino = { metodo: 'bizum', telefono: tel, iban: null, titular: null };
+  } else if (b.metodo === 'iban') {
+    const iban = ibanValido(b.iban);
+    const titular = String(b.titular ?? '').trim();
+    if (!iban) return res.status(400).json({ error: 'El IBAN no es válido' });
+    if (titular.length < 3 || titular.length > 100) return res.status(400).json({ error: 'Indica el nombre del titular de la cuenta' });
+    destino = { metodo: 'iban', telefono: null, iban, titular };
+  } else return res.status(400).json({ error: 'Elige Bizum o transferencia' });
+
   const client = await pool.connect();
   try {
     await client.query('begin');
-    // Primero se descuenta (con bloqueo de fila) y luego se transfiere; si Stripe falla, se revierte todo.
     await client.query('select 1 from users where id=$1 for update', [req.user.id]);
-    const ref = `retirada-${req.user.id}-${Date.now()}`;
-    await moverSaldo(client, req.user.id, 'retirada', -saldo_cents, { stripeRef: ref });
-    await stripe.transfers.create({
-      amount: saldo_cents, currency: 'eur', destination: stripe_account_id, metadata: { ref },
-    }, { idempotencyKey: ref });
+    const { rows: u } = await client.query('select saldo_cents from users where id=$1', [req.user.id]);
+    const importe = u[0].saldo_cents;
+    if (importe < RETIRADA_MIN_CENTS) { await client.query('rollback'); return res.status(409).json({ error: `Mínimo para retirar: ${RETIRADA_MIN_CENTS / 100} €` }); }
+    const { rows } = await client.query(
+      `insert into retiradas(user_id, importe_cents, metodo, telefono, iban, titular) values ($1,$2,$3,$4,$5,$6) returning id`,
+      [req.user.id, importe, destino.metodo, destino.telefono, destino.iban, destino.titular]);
+    await moverSaldo(client, req.user.id, 'retirada', -importe, { stripeRef: `retirada-${rows[0].id}` });
     await client.query('commit');
-    evento('retirada_saldo', { userId: req.user.id, ip: req.ip, data: { importe: saldo_cents } });
-    res.json({ retirado_cents: saldo_cents });
+    evento('retirada_solicitada', { userId: req.user.id, ip: req.ip, data: { id: rows[0].id, importe, metodo: destino.metodo } });
+    res.status(201).json({ id: rows[0].id, importe_cents: importe });
   } catch (e) {
     await client.query('rollback');
+    if (e.code === '23505') return res.status(409).json({ error: 'Ya tienes una retirada pendiente' });
     throw e;
   } finally { client.release(); }
 });
