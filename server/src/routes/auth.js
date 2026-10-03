@@ -16,7 +16,7 @@ const vehiculoSchema = z.object({
     .refine((v) => /^[A-Z0-9]{4,10}$/.test(v), 'Matrícula no válida'),
 });
 
-export const POLITICAS_VERSION = '2026-10-beta-2';
+export const POLITICAS_VERSION = '2026-10-beta-3';
 
 const registroSchema = vehiculoSchema.extend({
   acepta_politicas: z.literal(true, { error: 'Debes aceptar los términos y la política de privacidad' }),

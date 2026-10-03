@@ -120,11 +120,40 @@ r.get('/:id', cargar, async (req, res) => {
   res.json(out);
 });
 
+// Seguimiento en vivo: el comprador envía su posición mientras viene; el vendedor la consulta.
+r.post('/:id/posicion', cargar, async (req, res) => {
+  const p = z.object({ lat: z.coerce.number().min(-90).max(90), lng: z.coerce.number().min(-180).max(180) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Posición no válida' });
+  if (req.user.id !== req.tx.comprador_id || req.tx.estado !== 'en_escrow' || req.tx.comprador_llego_at)
+    return res.status(409).json({ error: 'Seguimiento no activo' });
+  await query(
+    `insert into seguimiento(transaccion_id, geo, updated_at) values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, now())
+     on conflict (transaccion_id) do update set geo=excluded.geo, updated_at=now()`, [req.tx.id, p.data.lat, p.data.lng]);
+  res.json({ ok: true });
+});
+
+// Para el vendedor: dónde va el comprador, a cuántos metros está y un tiempo estimado (aproximado, en coche por ciudad).
+r.get('/:id/seguimiento', cargar, async (req, res) => {
+  if (req.user.id !== req.tx.vendedor_id) return res.status(403).json({ error: 'Solo el vendedor' });
+  if (req.tx.estado !== 'en_escrow') return res.json({ activo: false });
+  const { rows } = await query(
+    `select ST_Y(s.geo::geometry) lat, ST_X(s.geo::geometry) lng, s.updated_at,
+            ST_Y(p.geo::geometry) plaza_lat, ST_X(p.geo::geometry) plaza_lng,
+            round(ST_Distance(s.geo, p.geo))::int as distancia_m
+       from plazas_activas p left join seguimiento s on s.transaccion_id=$1 where p.id=$2`, [req.tx.id, req.tx.plaza_id]);
+  const s = rows[0];
+  if (!s?.plaza_lat) return res.json({ activo: false });
+  // Estimación: ~1,3 × la distancia en línea recta a ~20 km/h de media en ciudad.
+  const eta_min = s.distancia_m != null ? Math.max(1, Math.round((s.distancia_m * 1.3) / (20000 / 60))) : null;
+  res.json({ activo: true, llego: !!req.tx.comprador_llego_at, ...s, eta_min, segundos: s.updated_at ? Math.round((Date.now() - new Date(s.updated_at)) / 1000) : null });
+});
+
 // Comprador avisa que llegó → notifica al vendedor ("puedes salir").
 r.post('/:id/llegue', cargar, async (req, res) => {
   if (req.user.id !== req.tx.comprador_id || req.tx.estado !== 'en_escrow')
     return res.status(409).json({ error: 'Acción no permitida' });
   await query('update transacciones set comprador_llego_at=now() where id=$1', [req.tx.id]);
+  await query('delete from seguimiento where transaccion_id=$1', [req.tx.id]);
   notify(req.tx.vendedor_id, 'comprador_llego', { transaccion_id: req.tx.id });
   res.json({ ok: true });
 });

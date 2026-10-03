@@ -35,6 +35,8 @@ async function tick() {
       where p.purgada_at is null and p.estado in ('completada','cancelada','expirada') and (
         exists (select 1 from transacciones t where t.plaza_id=p.id and t.location_purge_at < now())
         or (not exists (select 1 from transacciones t where t.plaza_id=p.id) and p.cerrada_at < now() - interval '1 hour'))`);
+  // Seguimiento en vivo del comprador: fuera en cuanto la reserva deja de estar activa o pasan 2 h sin señal.
+  await query(`delete from seguimiento s using transacciones t where t.id=s.transaccion_id and (t.estado <> 'en_escrow' or t.comprador_llego_at is not null or s.updated_at < now() - interval '2 hours')`);
   for (const c of cand) {
     await query('update plazas_activas set geo=null, purgada_at=now() where id=$1', [c.id]);
   }
