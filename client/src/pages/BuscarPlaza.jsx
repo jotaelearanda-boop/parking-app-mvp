@@ -72,8 +72,7 @@ export default function BuscarPlaza() {
           <button onClick={() => setSel(null)} aria-label="Cerrar" className="absolute right-4 top-4 text-2xl leading-none text-gray-400">×</button>
           <p className="text-2xl font-bold">{eur(sel.precio_cents)}</p>
           <p className="text-gray-600">
-            {sel.tiempo_indicado ? `${sel.minutos_restantes} min restantes` : 'Tiempo no indicado'}
-            {distancia != null && ` · a ${distancia} m de ti`} · {sel.vendedor} ★ {Number(sel.rating_avg).toFixed(1)} ({sel.rating_count})
+            {distancia != null ? `A ${distancia} m de ti · ` : ''}{sel.vendedor} ★ {Number(sel.rating_avg).toFixed(1)} ({sel.rating_count})
           </p>
           <div className="mt-3 space-y-2">
             {puedeSaldo && (

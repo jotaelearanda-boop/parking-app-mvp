@@ -61,7 +61,7 @@ export default function MiCoche({ user, onUser }) {
         {plaza && (
           <div className="space-y-1 rounded-xl border bg-white p-4">
             <p className="text-lg font-bold">{eur(plaza.precio_cents)} · {plaza.estado === 'disponible' ? 'Publicada' : 'Reservada'}</p>
-            <p className="text-gray-600">{plaza.tiempo_indicado ? `Te quedan ${plaza.minutos_restantes} min` : 'Tiempo no indicado (máx. 4 h)'}</p>
+            <p className="text-gray-600">{plaza.estado === 'disponible' ? 'Sigue publicada hasta que alguien la reserve o la canceles.' : 'Alguien la ha reservado.'}</p>
             {plaza.transaccion_id && <NavLink to={`/transaccion/${plaza.transaccion_id}`} className="mt-2 block rounded-lg bg-blue-600 p-3 text-center font-semibold text-white">Ver la reserva</NavLink>}
             {plaza.estado === 'disponible' && <button onClick={cancelar} className="mt-2 w-full rounded-lg border p-3">Cancelar plaza</button>}
           </div>

@@ -4,13 +4,12 @@ import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
 import { posicionActual } from '../services/geolocation.js';
 
-// Flujo "Acabo de aparcar": localiza, pide precio (y tiempo, opcional) y publica la plaza.
+// Flujo "Vender mi plaza": localiza, deja ajustar el pin, pide el precio y publica. La plaza no caduca.
 export default function VenderPlaza({ onPublicada }) {
   const aviso = useToast();
   const [pos, setPos] = useState(null);
   const [moverA, setMoverA] = useState(null);
   const pinRef = useRef(null);            // posición del pin = centro del mapa (se mueve arrastrando)
-  const [tiempo, setTiempo] = useState('');            // '' = sin indicar
   const [precio, setPrecio] = useState('1.50');
   const [enviando, setEnviando] = useState(false);
 
@@ -25,7 +24,7 @@ export default function VenderPlaza({ onPublicada }) {
     setEnviando(true);
     try {
       const { lat, lng } = pinRef.current ?? pos;
-      await api.publicarPlaza({ lat, lng, ...(tiempo && { tiempo_min: Number(tiempo) }), precio_cents: Math.round(Number(precio.replace(',', '.')) * 100) });
+      await api.publicarPlaza({ lat, lng, precio_cents: Math.round(Number(precio.replace(',', '.')) * 100) });
       aviso('Plaza publicada', 'ok');
       setPos(null);
       onPublicada?.();
@@ -38,7 +37,7 @@ export default function VenderPlaza({ onPublicada }) {
     <button onClick={aparcado} className="w-full rounded-xl bg-blue-600 p-5 text-lg font-bold text-white">
       📍 Vender mi plaza
     </button>
-    <p className="mt-2 text-xs text-gray-500">Usaremos tu ubicación solo para publicar la plaza. Se borra 1 hora después de cerrar la venta.</p>
+    <p className="mt-2 text-xs text-gray-500">Tu plaza seguirá publicada hasta que alguien la reserve o la canceles. Usaremos tu ubicación solo para publicarla. Se borra 1 hora después de cerrar la venta.</p>
     </>);
 
   return (
@@ -53,11 +52,6 @@ export default function VenderPlaza({ onPublicada }) {
           className="absolute bottom-3 right-3 rounded-full bg-white px-3 py-2 text-sm font-semibold shadow-md">📍 Mi ubicación</button>
       </div>
       <div className="space-y-3 p-4">
-        <label className="block">¿Cuánto tiempo te quedas? <span className="text-sm text-gray-500">(opcional)</span>
-          <select className="mt-1 w-full rounded border p-2" value={tiempo} onChange={(e) => setTiempo(e.target.value)}>
-            <option value="">Sin indicar</option>
-            <option value="30">30 min</option><option value="60">1 hora</option><option value="120">2 horas</option><option value="240">4 horas</option>
-          </select></label>
         <label className="block">Precio (€)
           <input className="mt-1 w-full rounded border p-2" value={precio} onChange={(e) => setPrecio(e.target.value)} inputMode="decimal" /></label>
         <div className="flex gap-2">
