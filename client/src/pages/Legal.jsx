@@ -51,7 +51,7 @@ export function Privacidad() {
       <H>3. Para qué y con qué base legal</H>
       <p>Prestar el servicio solicitado (ejecución del contrato): conectar vendedor y comprador, cobrar, gestionar el saldo y las reclamaciones. Prevenir el fraude y cumplir obligaciones legales (interés legítimo y obligación legal). La ubicación se trata con tu <b>consentimiento</b>, que puedes retirar desactivando el permiso de localización en tu navegador.</p>
       <H>4. Cuánto tiempo los conservamos</H>
-      <p>La ubicación de cada plaza se <b>elimina 1 hora después</b> de cerrarse la venta (o de caducar el aviso). Los datos de cuenta, vehículo y operaciones se conservan mientras tengas cuenta y, después, durante los plazos legales aplicables (por ejemplo, fiscales y de pagos).</p>
+      <p>La ubicación de cada plaza se <b>elimina 1 hora después</b> de cerrarse la venta (o de cancelarse el aviso). Los datos de cuenta, vehículo y operaciones se conservan mientras tengas cuenta y, después, durante los plazos legales aplicables (por ejemplo, fiscales y de pagos).</p>
       <H>5. Con quién los compartimos</H>
       <p>Proveedores que nos prestan servicio: Stripe (pagos), Supabase (base de datos, UE), Railway y Vercel (alojamiento) y Google Maps (mapas). Algunos pueden tratar datos fuera del Espacio Económico Europeo con las garantías legales correspondientes. No vendemos tus datos.</p>
       <H>6. Tus derechos</H>
