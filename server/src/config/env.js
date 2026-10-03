@@ -7,8 +7,8 @@ export const env = {
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: need('JWT_SECRET'),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
-  // Zona piloto: Benalúa (calle Aloná + García Andreu, Alicante).
-  zona: { lat: 38.3414, lng: -0.4963, radioM: Number(process.env.ZONA_RADIO_M ?? 700),
+  // Zona piloto: Benalúa (Aloná, García Andreu, Dr. Just, Pérez Medina, Pardo Gimeno, Foglietti y Quintiliano, Alicante).
+  zona: { lat: 38.3414, lng: -0.4963, radioM: Number(process.env.ZONA_RADIO_M ?? 1000),
           estricta: (process.env.ZONA_ESTRICTA ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')) === 'true' },
   // Orígenes del backoffice (separado de la app de clientes), separados por comas.
   adminOrigins: (process.env.ADMIN_ORIGIN ?? 'http://localhost:5174').split(',').map((x) => x.trim()).filter(Boolean),

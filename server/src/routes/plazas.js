@@ -11,19 +11,23 @@ const crearSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   precio_cents: z.coerce.number().int().min(50).max(2000).default(150),
+  vehiculo_id: z.string().uuid().optional(),
 });
 
 // Vendedor publica su plaza. Necesita tener su coche registrado (el comprador lo verá tras pagar).
 r.post('/', requireAuth, async (req, res) => {
-  if (!req.user.vehiculo_matricula) return res.status(409).json({ error: 'Añade los datos de tu coche antes de vender', codigo: 'falta_vehiculo' });
   const p = crearSchema.safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
   const { lat, lng, precio_cents } = p.data;
+  // Coche con el que se vende: el elegido o, si no, el principal.
+  const { rows: vh } = await query(
+    `select id from vehiculos where user_id=$1 and borrado_at is null and ($2::uuid is null or id=$2) order by principal desc limit 1`, [req.user.id, p.data.vehiculo_id ?? null]);
+  if (!vh[0]) return res.status(409).json({ error: 'Añade los datos de tu coche antes de vender', codigo: 'falta_vehiculo' });
   if (env.zona.estricta) {
     const { rows: z } = await query(
       'select ST_DWithin(ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, ST_SetSRID(ST_MakePoint($4,$3),4326)::geography, $5) as dentro',
       [lat, lng, env.zona.lat, env.zona.lng, env.zona.radioM]);
-    if (!z[0].dentro) return res.status(422).json({ error: 'Estás fuera de la zona piloto (Benalúa: Aloná y García Andreu)' });
+    if (!z[0].dentro) return res.status(422).json({ error: 'Estás fuera de la zona piloto (Benalúa)' });
   }
   const { rows: zb } = await query(
     `select nombre, tipo from zonas_bloqueadas where activa and ST_Intersects(geom, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography) limit 1`, [lat, lng]);
@@ -32,10 +36,10 @@ r.post('/', requireAuth, async (req, res) => {
     `select 1 from plazas_activas where seller_id=$1 and estado in ('disponible','reservada')`, [req.user.id]);
   if (activa.rowCount) return res.status(409).json({ error: 'Ya tienes una plaza activa' });
   const { rows } = await query(
-    `insert into plazas_activas(seller_id, geo, precio_cents)
-     values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4)
+    `insert into plazas_activas(seller_id, geo, precio_cents, vehiculo_id)
+     values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, $5)
      returning id, estado`,
-    [req.user.id, lat, lng, precio_cents]);
+    [req.user.id, lat, lng, precio_cents, vh[0].id]);
   avisarMatches(rows[0].id, lat, lng, req.user.id).catch((e) => console.error('match', e.message));   // push a quien busca plaza cerca
   res.status(201).json(rows[0]);
 });

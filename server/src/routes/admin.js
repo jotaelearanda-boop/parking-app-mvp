@@ -90,7 +90,8 @@ r.get('/usuarios/:id', async (req, res) => {
     query('select estrellas, created_at from ratings where destino_id=$1 order by created_at desc limit 20', [req.params.id]),
   ]);
   await log(req.user.id, 'ver_usuario', 'usuario', req.params.id);
-  res.json({ usuario: rows[0], transacciones: tx.rows, movimientos: mov.rows, disputas: disp.rows, ratings: rat.rows });
+  const veh = await query('select modelo, color, matricula, principal, borrado_at from vehiculos where user_id=$1 order by principal desc, created_at', [req.params.id]);
+  res.json({ usuario: { ...rows[0], vehiculos: veh.rows }, transacciones: tx.rows, movimientos: mov.rows, disputas: disp.rows, ratings: rat.rows });
 });
 
 r.post('/usuarios/:id/suspender', permiso('suspender'), async (req, res) => {

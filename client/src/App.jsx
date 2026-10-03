@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Transaccion from './pages/Transaccion.jsx';
 import MiCoche from './pages/MiCoche.jsx';
-import { IconoBuscar, IconoCartera, IconoCoche, IconoSalir } from './components/Iconos.jsx';
+import { IconoBuscar, IconoCartera, IconoCoche, IconoCuenta } from './components/Iconos.jsx';
+import Cuenta from './pages/Cuenta.jsx';
 import Saldo from './pages/Saldo.jsx';
 import Auth from './pages/Auth.jsx';
 import { Privacidad, Terminos } from './pages/Legal.jsx';
@@ -67,10 +68,11 @@ export default function App() {
     <div className="mx-auto max-w-xl pb-24">
       <Routes>
         <Route path="/" element={<BuscarPlaza />} />
-        <Route path="/coche" element={<MiCoche user={user} onUser={setUser} />} />
+        <Route path="/coche" element={<MiCoche />} />
         <Route path="/vender" element={<Navigate to="/coche" replace />} />
         <Route path="/mis" element={<Navigate to="/coche" replace />} />
         <Route path="/transaccion/:id" element={<Transaccion user={user} />} />
+        <Route path="/cuenta" element={<Cuenta user={user} onSalir={() => { cerrarWs(); setSession(null); setUser(null); nav('/'); }} />} />
         <Route path="/saldo" element={<Saldo user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
@@ -80,9 +82,9 @@ export default function App() {
       )}
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-xl border-t bg-white pb-[env(safe-area-inset-bottom)]">
         <NavLink to="/" end className={tab}><IconoBuscar />Buscar</NavLink>
-        <NavLink to="/coche" className={tab}><IconoCoche />Mi coche</NavLink>
+        <NavLink to="/coche" className={tab}><IconoCoche />Mis coches</NavLink>
         <NavLink to="/saldo" className={tab}><IconoCartera />Saldo</NavLink>
-        <button className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold text-gray-500" onClick={() => { cerrarWs(); setSession(null); setUser(null); }}><IconoSalir />Salir</button>
+        <NavLink to="/cuenta" className={tab}><IconoCuenta />Mi cuenta</NavLink>
       </nav>
     </div>
   );

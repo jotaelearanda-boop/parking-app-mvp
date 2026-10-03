@@ -36,6 +36,8 @@ r.post('/registro', async (req, res) => {
       `insert into users(email, phone, name, password_hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula, consent_at, consent_version)
        values (lower($1),$2,$3,$4,$5,$6,$7, now(), $8) returning *`,
       [email, phone, name, hash, vehiculo_modelo, vehiculo_color, vehiculo_matricula, POLITICAS_VERSION]);
+    await query('insert into vehiculos(user_id, modelo, color, matricula, principal) values ($1,$2,$3,$4,true)',
+      [rows[0].id, vehiculo_modelo, vehiculo_color, vehiculo_matricula]);
     // TODO semana 3: enviar código de verificación por email/SMS (proveedor por decidir)
     evento('registro', { userId: rows[0].id, ip: req.ip, data: { politicas: POLITICAS_VERSION } });
     res.status(201).json({ token: signToken(rows[0]), user: publico(rows[0]) });
@@ -55,15 +57,6 @@ r.post('/login', async (req, res) => {
   }
   evento('login_ok', { userId: u.id, ip: req.ip });
   res.json({ token: signToken(u), user: publico(u) });
-});
-
-r.put('/vehiculo', requireAuth, async (req, res) => {
-  const p = vehiculoSchema.safeParse(req.body);
-  if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
-  const { rows } = await query(
-    'update users set vehiculo_modelo=$1, vehiculo_color=$2, vehiculo_matricula=$3 where id=$4 returning *',
-    [p.data.vehiculo_modelo, p.data.vehiculo_color, p.data.vehiculo_matricula, req.user.id]);
-  res.json({ user: publico(rows[0]) });
 });
 
 // Usuarios anteriores a las políticas (o con una versión antigua) aceptan aquí.

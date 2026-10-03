@@ -1,5 +1,5 @@
 // Zona piloto: Benalúa, Alicante (calle Aloná y calle García Andreu).
-export const ZONA_PILOTO = { nombre: 'Benalúa (Aloná y García Andreu)', lat: 38.3414, lng: -0.4963 };
+export const ZONA_PILOTO = { nombre: 'Benalúa', lat: 38.3414, lng: -0.4963 };
 
 export const posicionActual = () =>
   new Promise((ok, fail) =>

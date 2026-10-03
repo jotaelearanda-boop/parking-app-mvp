@@ -7,3 +7,4 @@ export const IconoCartera = () => (<svg {...base}><path d="M4 7a2 2 0 0 1 2-2h11
 export const IconoEscudo = () => (<svg {...base}><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" /><path d="m9 12 2 2 4-4" /></svg>);
 export const IconoSalir = () => (<svg {...base}><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M16 8l4 4-4 4M20 12H9" /></svg>);
 export const IconoPin = () => (<svg {...base}><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>);
+export const IconoCuenta = () => (<svg {...base}><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" /></svg>);

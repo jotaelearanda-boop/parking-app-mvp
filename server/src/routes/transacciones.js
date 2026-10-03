@@ -60,11 +60,14 @@ r.post('/reservar/:plazaId', async (req, res) => {
       return res.status(409).json({ error: d[0]?.seller_id === req.user.id ? 'Esta plaza es tuya: no puedes reservarla' : 'Esta plaza ya no está disponible' });
     }
     const p = rows[0];
+    const { rows: vh } = await client.query(
+      `select id from vehiculos where user_id=$1 and borrado_at is null and ($2::uuid is null or id=$2) order by principal desc limit 1`,
+      [req.user.id, /^[0-9a-f-]{36}$/i.test(req.body?.vehiculo_id ?? '') ? req.body.vehiculo_id : null]);
     const comision = Math.round((p.precio_cents * env.comisionPct) / 100);
     const tx = (await client.query(
-      `insert into transacciones(plaza_id, vendedor_id, comprador_id, monto_cents, comision_cents)
-       values ($1,$2,$3,$4,$5) returning id, estado, monto_cents`,
-      [p.id, p.seller_id, req.user.id, p.precio_cents, comision])).rows[0];
+      `insert into transacciones(plaza_id, vendedor_id, comprador_id, monto_cents, comision_cents, comprador_vehiculo_id)
+       values ($1,$2,$3,$4,$5,$6) returning id, estado, monto_cents`,
+      [p.id, p.seller_id, req.user.id, p.precio_cents, comision, vh[0]?.id ?? null])).rows[0];
     let client_secret;
     // ¿Alcanza el saldo? Se descuenta y la plaza queda pagada al instante (sin pasar por Stripe, sin tarifa).
     await client.query('select 1 from users where id=$1 for update', [req.user.id]);
@@ -104,8 +107,14 @@ r.get('/:id', cargar, async (req, res) => {
   }
   // Tras pagar, cada parte ve el coche de la otra (como Uber) para reconocerse en la calle.
   if (['en_escrow', 'liberada', 'disputada'].includes(t.estado)) {
+    // Coche concreto de esa operación (el de la plaza para el vendedor, el elegido al reservar para el comprador); si falta, el principal.
+    const elOtroEsVendedor = otro(t, req.user.id) === t.vendedor_id;
     const { rows } = await query(
-      'select name, vehiculo_modelo modelo, vehiculo_color color, vehiculo_matricula matricula from users where id=$1', [otro(t, req.user.id)]);
+      `select u.name, v.modelo, v.color, v.matricula from users u
+         left join vehiculos v on v.id = coalesce(
+           case when $4::boolean then (select p.vehiculo_id from plazas_activas p where p.id=$3) else $2::uuid end,
+           (select id from vehiculos where user_id=u.id and principal and borrado_at is null))
+        where u.id=$1`, [otro(t, req.user.id), t.comprador_vehiculo_id, t.plaza_id, elOtroEsVendedor]);
     out.otro = rows[0];
   }
   res.json(out);

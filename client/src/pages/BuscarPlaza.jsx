@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Mapa from '../components/Mapa.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
+import SelectorCoche from '../components/SelectorCoche.jsx';
+import { onMensaje } from '../services/ws.js';
 import { ZONA_PILOTO, distanciaM, posicionActual } from '../services/geolocation.js';
 import { activarPush, estadoPush } from '../services/push.js';
 
@@ -22,9 +24,14 @@ export default function BuscarPlaza() {
   const [reservando, setReservando] = useState(false);
   const temporizador = useRef();
   const [params, setParams] = useSearchParams();
-  const [busq, setBusq] = useState(null);                // "Busco plaza" activo: { hasta, radio_m }
+  const [busq, setBusq] = useState(null);                // "Busco plaza" activo: { hasta, radio_m } (máx. 1 h)
+  const [coches, setCoches] = useState([]);
+  const [cocheId, setCocheId] = useState('');
 
   useEffect(() => { api.busqueda().then((r) => setBusq(r.busqueda)).catch(() => {}); }, []);
+  useEffect(() => { api.vehiculos().then((r) => { setCoches(r.vehiculos); setCocheId(r.vehiculos.find((c) => c.principal)?.id ?? ''); }).catch(() => {}); }, []);
+  // Al llegar un match el servidor desactiva la búsqueda.
+  useEffect(() => onMensaje((m) => { if (m.tipo === 'match') setBusq(null); }), []);
 
   // Enlace de un aviso push (?plaza=ID): abre esa plaza directamente.
   useEffect(() => {
@@ -42,7 +49,7 @@ export default function BuscarPlaza() {
     if (est === 'inactivo') await activarPush().catch((e) => aviso(e.message, 'error'));
     else if (est === 'instalar') aviso('Para que te avisemos con la app cerrada, instálala en tu pantalla de inicio (Compartir, Añadir a pantalla de inicio).', 'info');
     else if (est === 'bloqueado') aviso('Tienes las notificaciones bloqueadas: solo te avisaremos con la app abierta.', 'info');
-    try { const r = await api.buscarPlaza(centro.lat, centro.lng, 600); setBusq(r.busqueda); aviso('Te avisaremos si aparece una plaza a menos de 600 m en las próximas 3 horas', 'ok'); }
+    try { const r = await api.buscarPlaza(centro.lat, centro.lng, 600); setBusq(r.busqueda); aviso('Te avisaremos si aparece una plaza a menos de 600 m durante la próxima hora', 'ok'); }
     catch (e) { aviso(e.message, 'error'); }
   };
 
@@ -66,7 +73,7 @@ export default function BuscarPlaza() {
   const reservar = async (conSaldo) => {
     setReservando(true);
     try {
-      const t = await api.reservar(sel.id, conSaldo);
+      const t = await api.reservar(sel.id, conSaldo, cocheId || undefined);
       nav(`/transaccion/${t.id}`, { state: { clientSecret: t.client_secret } });
     } catch (e) { aviso(e.message, 'error'); setSel(null); }
     setReservando(false);
@@ -78,18 +85,17 @@ export default function BuscarPlaza() {
   return (
     <div>
       <div className="flex items-center gap-2 p-3">
-        <span className="text-sm font-semibold leading-tight">Zona: {ZONA_PILOTO.nombre}</span>
-        <input className="ml-auto w-28 rounded border p-1" type="number" step="0.10" placeholder="Precio máx €" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} />
+        <button onClick={alternarBusqueda} className={`min-w-0 flex-1 rounded-full border px-3 py-2 text-sm font-semibold ${busq ? 'border-blue-600 bg-blue-600 text-white' : 'bg-white'}`}>
+          {busq ? '🔔 Avisando · parar' : '🔔 Avísame'}
+        </button>
+        <button onClick={irAMiPos} className="min-w-0 flex-1 rounded-full border bg-white px-3 py-2 text-sm font-semibold">📍 Mi ubicación</button>
+        <input className="w-20 rounded-lg border p-2 text-sm" type="number" step="0.10" placeholder="€ máx" aria-label="Precio máximo en euros" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} />
       </div>
 
       <div className="relative">
-        <Mapa center={ZONA_PILOTO} className="h-[calc(100dvh-9rem)] min-h-[320px] w-full" zonas={zonas} moverA={moverA}
+        <Mapa center={ZONA_PILOTO} className="h-[calc(100dvh-8.5rem)] min-h-[320px] w-full" zonas={zonas} moverA={moverA}
           markers={[...plazas, ...(sel && !plazas.some((p) => p.id === sel.id) ? [sel] : [])].map((p) => ({ id: p.id, lat: Number(p.lat_aprox), lng: Number(p.lng_aprox), label: String(p.precio_cents / 100), ...p }))}
           onMarkerClick={(m) => setSel([...plazas, ...(sel ? [sel] : [])].find((p) => p.id === m.id))} onMapClick={() => setSel(null)} onCenterChange={alMoverMapa} />
-        <button onClick={alternarBusqueda} className={`absolute left-3 top-3 max-w-[48%] rounded-full px-3 py-2 text-left text-sm font-semibold shadow-md ${busq ? 'bg-blue-600 text-white' : 'bg-white'}`}>
-          {busq ? `🔔 Buscando hasta las ${new Date(busq.hasta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · parar` : '🔔 Avísame de plazas cerca'}
-        </button>
-        <button onClick={irAMiPos} aria-label="Mi ubicación" className="absolute right-3 top-3 rounded-full bg-white px-3 py-2 text-sm font-semibold shadow-md">📍 Mi ubicación</button>
         {!plazas.length && <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit rounded-full bg-white/95 px-4 py-2 text-sm text-gray-600 shadow">No hay plazas disponibles en esta zona ahora mismo</p>}
       </div>
 
@@ -103,6 +109,7 @@ export default function BuscarPlaza() {
             {distancia != null ? `A ${distancia} m de ti · ` : ''}{sel.vendedor} ★ {Number(sel.rating_avg).toFixed(1)} ({sel.rating_count})
           </p>
           <div className="mt-3 space-y-2">
+            <SelectorCoche coches={coches} value={cocheId} onChange={setCocheId} etiqueta="Voy con" />
             {puedeSaldo && (
               <button disabled={reservando} onClick={() => reservar(true)} className="w-full rounded-xl bg-blue-600 p-3.5 font-semibold text-white disabled:bg-gray-300">
                 Pagar con saldo · {eur(sel.precio_cents)} <span className="font-normal opacity-80">(tienes {eur(saldo)})</span>

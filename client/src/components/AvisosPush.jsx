@@ -4,7 +4,7 @@ import { api } from '../services/api.js';
 import { activarPush, desactivarPush, estadoPush } from '../services/push.js';
 
 // Tarjeta para activar/desactivar los avisos push. En iPhone hay que instalar la app primero.
-export default function AvisosPush() {
+export default function AvisosPush({ soloSiInactivo = false }) {
   const aviso = useToast();
   const [estado, setEstado] = useState(null);
   const cargar = useCallback(() => estadoPush().then(setEstado).catch(() => setEstado('no-soportado')), []);
@@ -14,7 +14,7 @@ export default function AvisosPush() {
   const desactivar = () => desactivarPush().then(() => { aviso('Avisos desactivados', 'ok'); cargar(); });
   const prueba = () => api.pushPrueba().then(() => aviso('Enviada: debería llegarte ahora', 'ok')).catch((e) => aviso(e.message, 'error'));
 
-  if (!estado) return null;
+  if (!estado || (soloSiInactivo && estado === 'activo')) return null;
   const caja = 'rounded-xl border bg-white p-4';
   if (estado === 'instalar') return (
     <div className={caja}>

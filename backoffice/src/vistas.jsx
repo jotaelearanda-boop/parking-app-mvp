@@ -50,7 +50,8 @@ function Usuarios({ can }) {
           <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm md:grid-cols-2">
             <div><dt className="inline text-gray-500">Email: </dt><dd className="inline">{u.email}</dd></div>
             <div><dt className="inline text-gray-500">Teléfono: </dt><dd className="inline">{u.phone}</dd></div>
-            <div><dt className="inline text-gray-500">Coche: </dt><dd className="inline">{u.vehiculo_modelo ?? '—'} · {u.vehiculo_color ?? ''} · <b className="font-mono">{u.vehiculo_matricula ?? '—'}</b></dd></div>
+            <div><dt className="inline text-gray-500">Coches: </dt><dd className="inline">{(u.vehiculos ?? []).filter((v) => !v.borrado_at).map((v) => (
+              <span key={v.matricula} className="mr-3 inline-block">{v.modelo} · {v.color} · <b className="font-mono">{v.matricula}</b>{v.principal ? ' (principal)' : ''}</span>)) || '—'}</dd></div>
             <div><dt className="inline text-gray-500">Saldo: </dt><dd className="inline font-semibold">{eur(u.saldo_cents)}</dd></div>
             <div><dt className="inline text-gray-500">Valoración: </dt><dd className="inline">★ {Number(u.rating_avg).toFixed(1)} ({u.rating_count})</dd></div>
             <div><dt className="inline text-gray-500">Alta: </dt><dd className="inline">{fecha(u.created_at)}</dd></div>

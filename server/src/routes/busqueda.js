@@ -1,4 +1,4 @@
-// Modo "Busco plaza": el comprador deja una zona y un radio durante 3 horas; si alguien publica una plaza ahí, recibe un push.
+// Modo "Busco plaza": el comprador deja una zona y un radio durante 1 hora; si alguien publica una plaza ahí, recibe un push.
 import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../config/db.js';
@@ -20,7 +20,7 @@ r.put('/', async (req, res) => {
   }).safeParse(req.body);
   if (!p.success) return res.status(400).json({ error: 'Datos no válidos' });
   const { rows } = await query(
-    `insert into busquedas_activas(user_id, geo, radio_m, hasta) values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, now() + interval '3 hours')
+    `insert into busquedas_activas(user_id, geo, radio_m, hasta) values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, now() + interval '1 hour')
      on conflict (user_id) do update set geo=excluded.geo, radio_m=excluded.radio_m, hasta=excluded.hasta, ultimo_match_at=null
      returning hasta, radio_m`, [req.user.id, p.data.lat, p.data.lng, p.data.radio_m]);
   evento('busco_plaza', { userId: req.user.id, ip: req.ip, data: { radio_m: p.data.radio_m } });

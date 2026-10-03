@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import SelectorCoche from '../components/SelectorCoche.jsx';
 import Mapa from '../components/Mapa.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
@@ -12,6 +13,9 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
   const pinRef = useRef(null);            // posición del pin = centro del mapa (se mueve arrastrando)
   const [precio, setPrecio] = useState('1.50');
   const [enviando, setEnviando] = useState(false);
+  const [coches, setCoches] = useState([]);
+  const [cocheId, setCocheId] = useState('');
+  useEffect(() => { api.vehiculos().then((r) => { setCoches(r.vehiculos); setCocheId(r.vehiculos.find((c) => c.principal)?.id ?? ''); }).catch(() => {}); }, []);
 
   // Si ya sabemos dónde está el coche (plaza ocupada) se parte de ahí; si no, del GPS.
   const aparcado = () => (inicio ? Promise.resolve(inicio) : posicionActual()).then((p) => { pinRef.current = p; setPos(p); }).catch((e) => aviso(
@@ -25,7 +29,7 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
     setEnviando(true);
     try {
       const { lat, lng } = pinRef.current ?? pos;
-      await api.publicarPlaza({ lat, lng, precio_cents: Math.round(Number(precio.replace(',', '.')) * 100) });
+      await api.publicarPlaza({ lat, lng, precio_cents: Math.round(Number(precio.replace(',', '.')) * 100), ...(cocheId && { vehiculo_id: cocheId }) });
       aviso('Plaza publicada', 'ok');
       setPos(null);
       onPublicada?.();
@@ -53,6 +57,7 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
           className="absolute bottom-3 right-3 rounded-full bg-white px-3 py-2 text-sm font-semibold shadow-md">📍 Mi ubicación</button>
       </div>
       <div className="space-y-3 p-4">
+        <SelectorCoche coches={coches} value={cocheId} onChange={setCocheId} etiqueta="Coche con el que vendes" />
         <label className="block">Precio (€)
           <input className="mt-1 w-full rounded border p-2" value={precio} onChange={(e) => setPrecio(e.target.value)} inputMode="decimal" /></label>
         <div className="flex gap-2">
