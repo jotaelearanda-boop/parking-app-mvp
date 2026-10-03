@@ -35,7 +35,7 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 - [x] Dominio de Vercel añadido a la clave de Maps. Pendiente: quitar `localhost` de las restricciones antes del lanzamiento público.
 
 ## Notificaciones push
-- [ ] Poner `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Railway (sin ellas el servidor no envía avisos). La privada solo vive ahí.
+- [x] Poner `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Railway (sin ellas el servidor no envía avisos). La privada solo vive ahí.
 - [ ] Probar en un iPhone con la app instalada en la pantalla de inicio (iOS 16.4+) y en un Android: activar avisos, "Enviar prueba", match y recordatorio.
 - [ ] Decidir más adelante si se hace app nativa para avisar al acercarse a una zona con la app cerrada (Apple Developer 99 $/año).
 - [ ] Ajustar los textos de los avisos y el ritmo de los recordatorios (`RECORDATORIO_HORAS`, hoy 5 h, de 8:00 a 21:59 hora de Madrid).
@@ -76,7 +76,7 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 
 ## Producto / QA
 - [ ] Probar en móvil real: GPS, instalar PWA, notificaciones, pago con Apple Pay / Google Pay.
-- [ ] Confirmar las coordenadas reales de Aloná / García Andreu con una prueba en la calle.
+- [ ] Confirmar con una prueba en la calle que las 7 calles del piloto (Aloná, García Andreu, Dr. Just, Pérez Medina, Pardo Gimeno, Foglietti, Quintiliano) caen dentro de la geocerca (centro fijo, radio 1000 m; `ZONA_RADIO_M` en Railway si hubiera que ampliarlo). Si Railway ya tenía `ZONA_RADIO_M=700`, subirlo.
 - [ ] Notificaciones push reales (hoy solo avisos en la app abierta por WebSocket).
 - [ ] Verificación real de email y teléfono (hoy no se envía el código).
 - [ ] Probar el límite de 700 m de la geocerca desde la calle.
