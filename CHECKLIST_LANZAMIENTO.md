@@ -34,6 +34,18 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 ## Google Maps
 - [x] Dominio de Vercel añadido a la clave de Maps. Pendiente: quitar `localhost` de las restricciones antes del lanzamiento público.
 
+## Notificaciones push
+- [ ] Poner `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en Railway (sin ellas el servidor no envía avisos). La privada solo vive ahí.
+- [ ] Probar en un iPhone con la app instalada en la pantalla de inicio (iOS 16.4+) y en un Android: activar avisos, "Enviar prueba", match y recordatorio.
+- [ ] Decidir más adelante si se hace app nativa para avisar al acercarse a una zona con la app cerrada (Apple Developer 99 $/año).
+- [ ] Ajustar los textos de los avisos y el ritmo de los recordatorios (`RECORDATORIO_HORAS`, hoy 5 h, de 8:00 a 21:59 hora de Madrid).
+
+## Retiradas de saldo
+- [ ] Solicitar a Monei el acceso a su API de pagos con Bizum (beta cerrada, aprobación de riesgos, saldo prefinanciado). Mientras tanto, se pagan a mano desde Backoffice, Retiradas.
+- [ ] Consulta legal sobre guardar saldo de usuarios y pagarlo desde el banco (servicio de pago / dinero electrónico).
+- [ ] Cifrar el IBAN de `retiradas` en la aplicación antes de lanzar.
+- [ ] Verificar email y teléfono antes de pagar retiradas (el móvil es el destino del Bizum).
+
 ## Zonas reguladas (ORA)
 - [ ] El portal de datos abiertos de Alicante **no publica** las zonas ORA y OpenStreetMap no tiene cobertura en Benalúa. Opciones: pedir al Ayuntamiento/concesionaria el plano oficial, o dibujar las calles a mano en Backoffice → Zonas (geojson.io).
 - [ ] **Riesgo de negocio:** la ampliación de la ORA incluye Benalúa y Benalúa Sur. Comprobar si Aloná y García Andreu pasarán a zona azul/naranja y cuándo.
@@ -45,7 +57,7 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 - [x] Auditoría inmutable: `admin_log` (acciones y peticiones) y `eventos` (registros, accesos, pagos, reembolsos, retiradas...). Triggers impiden UPDATE/DELETE.
 - [ ] Activar **2FA** en la cuenta superadmin del backoffice (hoy solo email + contraseña) y valorar restringir por IP o poner el backoffice detrás de Vercel Authentication.
 - [ ] Contraseña larga y única para la cuenta superadmin.
-- [ ] Antes de lanzar, vaciar datos de prueba: `truncate admin_log, eventos` y luego borrar usuarios/transacciones de prueba (los triggers no bloquean TRUNCATE).
+- [ ] Antes de lanzar, vaciar datos de prueba: `truncate admin_log, eventos` y luego borrar usuarios, transacciones, retiradas, ocupaciones, búsquedas y suscripciones push de prueba (los triggers no bloquean TRUNCATE).
 - [ ] Definir cuánto tiempo se conservan `admin_log` y `eventos` (RGPD) y cómo se exportan para una auditoría.
 
 ## Legal y privacidad
