@@ -6,6 +6,7 @@ const need = (k) => {
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   jwtSecret: need('JWT_SECRET'),
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   // Zona piloto: Benalúa (Aloná, García Andreu, Dr. Just, Pérez Medina, Pardo Gimeno, Foglietti y Quintiliano, Alicante).
   zona: { lat: 38.3414, lng: -0.4963, radioM: Number(process.env.ZONA_RADIO_M ?? 1000),

@@ -28,7 +28,7 @@ function Datos({ user, onUser, onCerrar }) {
   const [f, setF] = useState({ name: user.name, email: user.email, phone: user.phone, password_actual: '', password_nueva: '' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const input = 'w-full rounded-lg border p-3';
-  const pide = f.email.trim().toLowerCase() !== user.email || f.password_nueva;
+  const pide = !user.sin_password && (f.email.trim().toLowerCase() !== user.email || f.password_nueva);
   const guardar = (e) => {
     e.preventDefault();
     api.guardarPerfil({ name: f.name, email: f.email, phone: f.phone, ...(pide && { password_actual: f.password_actual }), ...(f.password_nueva && { password_nueva: f.password_nueva }) })
@@ -38,7 +38,7 @@ function Datos({ user, onUser, onCerrar }) {
   return (
     <form onSubmit={guardar} className="space-y-2 rounded-xl border bg-white p-4">
       <label className="block text-sm">Nombre<input className={input} value={f.name} onChange={set('name')} required minLength={2} /></label>
-      <label className="block text-sm">Email<input className={input} type="email" value={f.email} onChange={set('email')} required /></label>
+      <label className="block text-sm">Email<input className={input} type="email" value={f.email} onChange={set('email')} required disabled={user.google_vinculada} /></label>
       <label className="block text-sm">Teléfono<input className={input} type="tel" value={f.phone} onChange={set('phone')} required /></label>
       <label className="block text-sm">Nueva contraseña (opcional)<input className={input} type="password" minLength={8} placeholder="Déjala vacía para no cambiarla" value={f.password_nueva} onChange={set('password_nueva')} autoComplete="new-password" /></label>
       {pide && <label className="block text-sm">Contraseña actual (necesaria para cambiar email o contraseña)<input className={input} type="password" value={f.password_actual} onChange={set('password_actual')} required autoComplete="current-password" /></label>}
