@@ -59,6 +59,39 @@ r.post('/login', async (req, res) => {
   res.json({ token: signToken(u), user: publico(u) });
 });
 
+// Datos personales. Cambiar el email o la contraseña exige la contraseña actual.
+r.put('/perfil', requireAuth, async (req, res) => {
+  const p = z.object({
+    name: z.string().trim().min(2).max(60),
+    email: z.string().trim().email(),
+    phone: z.string().regex(/^\+?[0-9 ]{9,15}$/, 'Teléfono inválido'),
+    password_actual: z.string().max(100).optional(),
+    password_nueva: z.string().min(8, 'La contraseña nueva debe tener al menos 8 caracteres').max(100).optional(),
+  }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: p.error.issues[0].message });
+  const d = p.data, u = req.user, email = d.email.toLowerCase();
+  const cambiaEmail = email !== u.email, cambiaPass = !!d.password_nueva;
+  if (cambiaEmail || cambiaPass) {
+    const { rows } = await query('select password_hash from users where id=$1', [u.id]);
+    if (!d.password_actual || !(await bcrypt.compare(d.password_actual, rows[0].password_hash)))
+      return res.status(403).json({ error: 'Para cambiar el email o la contraseña indica tu contraseña actual' });
+  }
+  try {
+    const { rows } = await query(
+      `update users set name=$2, email=$3, phone=$4,
+         email_verified = case when $3 <> email then false else email_verified end,
+         phone_verified = case when $4 <> phone then false else phone_verified end,
+         password_hash = coalesce($5, password_hash)
+       where id=$1 returning *`,
+      [u.id, d.name, email, d.phone, cambiaPass ? await bcrypt.hash(d.password_nueva, 10) : null]);
+    evento('perfil_editado', { userId: u.id, ip: req.ip, data: { email: cambiaEmail, telefono: d.phone !== u.phone, password: cambiaPass } });
+    res.json({ user: publico(rows[0]) });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ error: 'Ese email ya está registrado' });
+    throw e;
+  }
+});
+
 // Usuarios anteriores a las políticas (o con una versión antigua) aceptan aquí.
 r.post('/consentimiento', requireAuth, async (req, res) => {
   if (req.body?.acepta_politicas !== true) return res.status(400).json({ error: 'Debes aceptar para continuar' });

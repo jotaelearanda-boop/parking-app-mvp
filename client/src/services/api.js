@@ -24,6 +24,7 @@ export const api = {
   editarVehiculo: (id, b) => req(`/vehiculos/${id}`, { method: 'PUT', body: b }),
   vehiculoPrincipal: (id) => req(`/vehiculos/${id}/principal`, { method: 'POST' }),
   borrarVehiculo: (id) => req(`/vehiculos/${id}`, { method: 'DELETE' }),
+  guardarPerfil: (b) => req('/auth/perfil', { method: 'PUT', body: b }),
   yo: () => req('/auth/yo'),
   publicarPlaza: (body) => req('/plazas', { method: 'POST', body }),
   plazasCerca: (q) => req(`/plazas/cerca?${new URLSearchParams(q)}`),

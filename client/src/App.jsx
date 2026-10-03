@@ -72,7 +72,7 @@ export default function App() {
         <Route path="/vender" element={<Navigate to="/coche" replace />} />
         <Route path="/mis" element={<Navigate to="/coche" replace />} />
         <Route path="/transaccion/:id" element={<Transaccion user={user} />} />
-        <Route path="/cuenta" element={<Cuenta user={user} onSalir={() => { cerrarWs(); setSession(null); setUser(null); nav('/'); }} />} />
+        <Route path="/cuenta" element={<Cuenta user={user} onUser={setUser} onSalir={() => { cerrarWs(); setSession(null); setUser(null); nav('/'); }} />} />
         <Route path="/saldo" element={<Saldo user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

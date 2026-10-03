@@ -86,7 +86,7 @@ export default function BuscarPlaza() {
     <div>
       <div className="flex items-center gap-2 p-3">
         <button onClick={alternarBusqueda} className={`min-w-0 flex-1 rounded-full border px-3 py-2 text-sm font-semibold ${busq ? 'border-blue-600 bg-blue-600 text-white' : 'bg-white'}`}>
-          {busq ? '🔔 Avisando · parar' : '🔔 Avísame'}
+          {busq ? '🅿️ Buscando · parar' : '🅿️ Búscame'}
         </button>
         <button onClick={irAMiPos} className="min-w-0 flex-1 rounded-full border bg-white px-3 py-2 text-sm font-semibold">📍 Mi ubicación</button>
         <input className="w-20 rounded-lg border p-2 text-sm" type="number" step="0.10" placeholder="€ máx" aria-label="Precio máximo en euros" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} />
