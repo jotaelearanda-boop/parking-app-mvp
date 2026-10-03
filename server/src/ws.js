@@ -1,6 +1,7 @@
 // WebSocket para notificaciones y chat en tiempo real. Auth con JWT en ?token=
 import { WebSocketServer } from 'ws';
 import { verifyToken } from './middleware/auth.js';
+import { enviarPush, textoPush } from './config/push.js';
 
 const conexiones = new Map(); // userId -> Set<WebSocket>
 
@@ -17,8 +18,13 @@ export function attachWs(server) {
   });
 }
 
-// Envía {tipo, ...datos} a todas las pestañas conectadas del usuario.
+// Envía {tipo, ...datos} a las pestañas abiertas del usuario. Si no tiene la app abierta, manda un push.
 export function notify(userId, tipo, datos = {}) {
   const msg = JSON.stringify({ tipo, ...datos });
-  for (const s of conexiones.get(userId) ?? []) if (s.readyState === 1) s.send(msg);
+  let abiertas = 0;
+  for (const s of conexiones.get(userId) ?? []) if (s.readyState === 1) { s.send(msg); abiertas++; }
+  if (!abiertas) {
+    const t = textoPush(tipo, datos);
+    if (t) enviarPush(userId, t).catch(() => {});
+  }
 }

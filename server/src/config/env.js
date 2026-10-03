@@ -16,3 +16,11 @@ export const env = {
   stripeKey: process.env.STRIPE_SECRET_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 };
+
+// Notificaciones push (Web Push / VAPID). Sin claves, el servidor funciona igual pero no envía push.
+export const push = {
+  publicKey: process.env.VAPID_PUBLIC_KEY,
+  privateKey: process.env.VAPID_PRIVATE_KEY,
+  subject: process.env.VAPID_SUBJECT ?? 'https://parking-app-mvp-beryl.vercel.app',
+  recordatorioHoras: Number(process.env.RECORDATORIO_HORAS ?? 5),
+};

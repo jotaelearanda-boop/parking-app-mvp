@@ -4,7 +4,7 @@ const Pagina = ({ titulo, children }) => (
   <main className="mx-auto max-w-2xl space-y-3 p-5 pb-16 leading-relaxed">
     <a href="/" className="text-sm text-blue-600">← Volver</a>
     <h1 className="text-2xl font-bold">{titulo}</h1>
-    <p className="rounded bg-yellow-50 p-2 text-sm text-yellow-900">Versión beta 2026-10 · Texto provisional sujeto a revisión legal.</p>
+    <p className="rounded bg-yellow-50 p-2 text-sm text-yellow-900">Versión beta 2026-10 (2) · Texto provisional sujeto a revisión legal.</p>
     {children}
   </main>
 );
@@ -45,6 +45,9 @@ export function Privacidad() {
         <li><b>Cuenta:</b> nombre, email, teléfono y contraseña (cifrada).</li>
         <li><b>Vehículo:</b> modelo, color y matrícula. Se muestran a la otra parte <u>solo</u> cuando hay una plaza pagada, para que os reconozcáis en la calle.</li>
         <li><b>Ubicación:</b> cuando pulsas «Vender mi plaza» usamos la ubicación de tu dispositivo (con tu permiso) y la que tú ajustas en el mapa. Al comprador se le muestra una ubicación aproximada y, tras pagar, la exacta de esa plaza.</li>
+        <li><b>Tu plaza ocupada:</b> si compras una plaza o pulsas «Estoy aparcado aquí», guardamos la ubicación de tu coche mientras lo ocupes para recordarte que puedes venderla. Se borra al venderla o al marcar «Ya no tengo esta plaza».</li>
+        <li><b>«Avísame de plazas cerca»:</b> guardamos la zona y el radio que indicas durante 3 horas para avisarte si aparece una plaza; después se borran.</li>
+        <li><b>Notificaciones:</b> solo si las activas. Las enviamos a través de los servicios de notificaciones de tu navegador (Apple, Google), y puedes desactivarlas cuando quieras.</li>
         <li><b>Pagos y saldo:</b> importes, movimientos y estado de las operaciones. Los datos de tarjeta los gestiona Stripe; nosotros no los vemos ni los guardamos.</li>
         <li><b>Actividad:</b> mensajes del chat de cada reserva, valoraciones y reclamaciones.</li>
       </ul>

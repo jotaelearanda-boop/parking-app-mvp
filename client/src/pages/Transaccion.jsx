@@ -31,6 +31,8 @@ export default function Transaccion({ user }) {
   useEffect(() => fin.current?.scrollIntoView(), [msgs]);
 
   const accion = (fn) => () => fn(id).then(cargar).catch((e) => setErr(e.message));
+  const rapido = async (t) => { try { const m = await api.enviarChat(id, t); setMsgs((x) => [...x, m]); } catch (x) { setErr(x.message); } };
+
   async function enviar(e) {
     e.preventDefault();
     if (!texto.trim()) return;
@@ -84,6 +86,11 @@ export default function Transaccion({ user }) {
           ))}
           <div ref={fin} />
         </div>
+        {['pendiente_pago', 'en_escrow'].includes(tx.estado) && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {['¡Estoy detrás de ti! 👀', 'Ya llego 🚶', '¿Cuánto te queda? ⏱️'].map((t) => (
+              <button key={t} type="button" onClick={() => rapido(t)} className="rounded-full border bg-blue-50 px-3 py-1.5 text-sm text-blue-800">{t}</button>))}
+          </div>)}
         <form onSubmit={enviar} className="mt-2 flex gap-2">
           <input className="flex-1 rounded border p-2" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escribe un mensaje" maxLength={500} />
           <button className="rounded bg-blue-600 px-4 text-white">Enviar</button>

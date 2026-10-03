@@ -11,6 +11,9 @@ import saldoRoutes from './routes/saldo.js';
 import adminRoutes from './routes/admin.js';
 import backofficeRoutes from './routes/backoffice.js';
 import { iniciarJobs } from './jobs.js';
+import pushRoutes from './routes/push.js';
+import ocupacionRoutes from './routes/ocupacion.js';
+import busquedaRoutes from './routes/busqueda.js';
 import plazasRoutes from './routes/plazas.js';
 
 export const app = express();
@@ -27,6 +30,9 @@ app.use('/api/saldo', saldoRoutes);
 app.use('/api/backoffice', backofficeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/plazas', plazasRoutes);
+app.use('/api/push', pushRoutes);
+app.use('/api/ocupacion', ocupacionRoutes);
+app.use('/api/busqueda', busquedaRoutes);
 app.use('/api/transacciones', transaccionesRoutes);
 
 app.use((err, _q, res, _n) => {

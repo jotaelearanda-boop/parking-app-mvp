@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Mapa from '../components/Mapa.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
 import { ZONA_PILOTO, distanciaM, posicionActual } from '../services/geolocation.js';
+import { activarPush, estadoPush } from '../services/push.js';
 
 const eur = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
 
@@ -20,6 +21,30 @@ export default function BuscarPlaza() {
   const [moverA, setMoverA] = useState(null);
   const [reservando, setReservando] = useState(false);
   const temporizador = useRef();
+  const [params, setParams] = useSearchParams();
+  const [busq, setBusq] = useState(null);                // "Busco plaza" activo: { hasta, radio_m }
+
+  useEffect(() => { api.busqueda().then((r) => setBusq(r.busqueda)).catch(() => {}); }, []);
+
+  // Enlace de un aviso push (?plaza=ID): abre esa plaza directamente.
+  useEffect(() => {
+    const id = params.get('plaza');
+    if (!id) return;
+    api.plazaPorId(id)
+      .then(({ plaza }) => { setSel({ ...plaza, profundo: true }); setMoverA({ lat: Number(plaza.lat_aprox), lng: Number(plaza.lng_aprox), n: Date.now() }); })
+      .catch((e) => aviso(e.message, 'error'))
+      .finally(() => setParams({}, { replace: true }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const alternarBusqueda = async () => {
+    if (busq) { await api.dejarDeBuscar().catch(() => {}); setBusq(null); aviso('Has dejado de buscar plaza', 'info'); return; }
+    const est = await estadoPush().catch(() => 'no-soportado');
+    if (est === 'inactivo') await activarPush().catch((e) => aviso(e.message, 'error'));
+    else if (est === 'instalar') aviso('Para que te avisemos con la app cerrada, instálala en tu pantalla de inicio (Compartir, Añadir a pantalla de inicio).', 'info');
+    else if (est === 'bloqueado') aviso('Tienes las notificaciones bloqueadas: solo te avisaremos con la app abierta.', 'info');
+    try { const r = await api.buscarPlaza(centro.lat, centro.lng, 600); setBusq(r.busqueda); aviso('Te avisaremos si aparece una plaza a menos de 600 m en las próximas 3 horas', 'ok'); }
+    catch (e) { aviso(e.message, 'error'); }
+  };
 
   useEffect(() => { api.saldo().then((r) => setSaldo(r.saldo_cents)).catch(() => {}); api.zonas().then(setZonas).catch(() => {}); }, []);
 
@@ -27,7 +52,7 @@ export default function BuscarPlaza() {
   useEffect(() => {
     const cargar = () => api.plazasCerca({
       lat: centro.lat, lng: centro.lng, radio: 1000, ...(precioMax && { precio_max: Math.round(precioMax * 100) }),
-    }).then((r) => { setPlazas(r.plazas); setSel((c) => (c && r.plazas.some((p) => p.id === c.id) ? c : null)); }).catch(() => {});
+    }).then((r) => { setPlazas(r.plazas); setSel((c) => (c && (c.profundo || r.plazas.some((p) => p.id === c.id)) ? c : null)); }).catch(() => {});
     cargar();
     const id = setInterval(cargar, 5000);
     return () => clearInterval(id);
@@ -59,8 +84,11 @@ export default function BuscarPlaza() {
 
       <div className="relative">
         <Mapa center={ZONA_PILOTO} className="h-[calc(100dvh-9rem)] min-h-[320px] w-full" zonas={zonas} moverA={moverA}
-          markers={plazas.map((p) => ({ id: p.id, lat: Number(p.lat_aprox), lng: Number(p.lng_aprox), label: String(p.precio_cents / 100), ...p }))}
-          onMarkerClick={(m) => setSel(plazas.find((p) => p.id === m.id))} onMapClick={() => setSel(null)} onCenterChange={alMoverMapa} />
+          markers={[...plazas, ...(sel && !plazas.some((p) => p.id === sel.id) ? [sel] : [])].map((p) => ({ id: p.id, lat: Number(p.lat_aprox), lng: Number(p.lng_aprox), label: String(p.precio_cents / 100), ...p }))}
+          onMarkerClick={(m) => setSel([...plazas, ...(sel ? [sel] : [])].find((p) => p.id === m.id))} onMapClick={() => setSel(null)} onCenterChange={alMoverMapa} />
+        <button onClick={alternarBusqueda} className={`absolute left-3 top-3 max-w-[48%] rounded-full px-3 py-2 text-left text-sm font-semibold shadow-md ${busq ? 'bg-blue-600 text-white' : 'bg-white'}`}>
+          {busq ? `🔔 Buscando hasta las ${new Date(busq.hasta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · parar` : '🔔 Avísame de plazas cerca'}
+        </button>
         <button onClick={irAMiPos} aria-label="Mi ubicación" className="absolute right-3 top-3 rounded-full bg-white px-3 py-2 text-sm font-semibold shadow-md">📍 Mi ubicación</button>
         {!plazas.length && <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit rounded-full bg-white/95 px-4 py-2 text-sm text-gray-600 shadow">No hay plazas disponibles en esta zona ahora mismo</p>}
       </div>

@@ -3,7 +3,9 @@ import { NavLink } from 'react-router-dom';
 import CamposVehiculo from '../components/CamposVehiculo.jsx';
 import { IconoCoche } from '../components/Iconos.jsx';
 import { useToast } from '../components/Toast.jsx';
+import AvisosPush from '../components/AvisosPush.jsx';
 import VenderPlaza from './VenderPlaza.jsx';
+import { posicionActual } from '../services/geolocation.js';
 import { api } from '../services/api.js';
 import { onMensaje } from '../services/ws.js';
 
@@ -38,14 +40,22 @@ function Coche({ user, onUser }) {
 
 export default function MiCoche({ user, onUser }) {
   const aviso = useToast();
-  const [plaza, setPlaza] = useState(undefined);   // undefined = cargando, null = sin plaza
+  const [plaza, setPlaza] = useState(undefined);   // undefined = cargando, null = sin plaza publicada
+  const [ocupa, setOcupa] = useState(null);         // plaza que ocupo (comprada o marcada a mano), aún sin vender
   const [hist, setHist] = useState([]);
   const cargar = useCallback(() => {
     api.miPlaza().then((r) => setPlaza(r.plaza)).catch(() => setPlaza(null));
+    api.ocupacion().then((r) => setOcupa(r.ocupacion)).catch(() => {});
     api.misTransacciones().then((r) => setHist(r.transacciones)).catch(() => {});
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => onMensaje((m) => { if (['comprador_interesado', 'plaza_pagada', 'reembolsado'].includes(m.tipo)) cargar(); }), [cargar]);
+  useEffect(() => onMensaje((m) => { if (['comprador_interesado', 'plaza_pagada', 'reembolsado', 'plaza_lista'].includes(m.tipo)) cargar(); }), [cargar]);
+
+  const marcarAparcado = () => posicionActual()
+    .then((p) => api.marcarOcupacion(p.lat, p.lng))
+    .then((r) => { setOcupa(r.ocupacion); aviso('Anotado: te recordaremos que puedes vender tu plaza', 'ok'); })
+    .catch(() => aviso('No pude obtener tu ubicación. Revisa el permiso de localización.', 'error'));
+  const yaNoTengo = () => confirm('¿Ya no tienes esa plaza?') && api.liberarOcupacion().then(() => { setOcupa(null); aviso('Hecho', 'ok'); });
 
   const cancelar = () => api.cancelarPlaza(plaza.id).then(() => { aviso('Plaza cancelada', 'ok'); cargar(); }).catch((e) => aviso(e.message, 'error'));
 
@@ -53,11 +63,24 @@ export default function MiCoche({ user, onUser }) {
     <div className="space-y-4 p-4">
       <h1 className="text-xl font-bold">Mi coche</h1>
       <Coche user={user} onUser={onUser} />
+      <AvisosPush />
 
       <section className="space-y-2">
         <h2 className="font-semibold">Mi plaza</h2>
         {plaza === undefined && <p className="text-gray-500">Cargando…</p>}
-        {plaza === null && <VenderPlaza onPublicada={cargar} />}
+        {plaza === null && ocupa && (
+          <div className="space-y-2 rounded-xl border bg-white p-4">
+            <p className="font-semibold">🅿️ Tienes plaza</p>
+            <p className="text-sm text-gray-600">{ocupa.origen === 'comprada' ? 'La conseguiste en la app' : 'La marcaste tú'} el {new Date(ocupa.desde).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}. No caduca: véndela cuando te vayas.</p>
+            <VenderPlaza onPublicada={cargar} inicio={{ lat: ocupa.lat, lng: ocupa.lng }} />
+            <button onClick={yaNoTengo} className="w-full rounded-lg border p-2 text-sm text-gray-600">Ya no tengo esta plaza</button>
+          </div>)}
+        {plaza === null && !ocupa && (
+          <div className="space-y-2">
+            <VenderPlaza onPublicada={cargar} />
+            <button onClick={marcarAparcado} className="w-full rounded-xl border bg-white p-3 font-semibold">🚗 Estoy aparcado aquí (aún no vendo)</button>
+            <p className="text-xs text-gray-500">Si ya has aparcado, márcalo: te recordaremos que puedes vender tu plaza cuando te vayas.</p>
+          </div>)}
         {plaza && (
           <div className="space-y-1 rounded-xl border bg-white p-4">
             <p className="text-lg font-bold">{eur(plaza.precio_cents)} · {plaza.estado === 'disponible' ? 'Publicada' : 'Reservada'}</p>

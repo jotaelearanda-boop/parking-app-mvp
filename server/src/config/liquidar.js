@@ -17,7 +17,11 @@ export async function liberarAlVendedor(txId, { porSalida = false } = {}) {
     const t = rows[0];
     if (!t) { await c.query('rollback'); return null; }
     await moverSaldo(c, t.vendedor_id, 'venta', t.monto_cents - t.comision_cents, { transaccionId: t.id });
-    await c.query("update plazas_activas set estado='completada' where id=$1", [t.plaza_id]);
+    await c.query("update plazas_activas set estado='completada', cerrada_at=now() where id=$1", [t.plaza_id]);
+    // El vendedor se ha ido (ya no ocupa plaza) y el comprador pasa a ocuparla: se le recordará que puede venderla.
+    await c.query("update ocupaciones set activa=false, geo=null, terminada_at=now() where user_id=$1 and activa", [t.vendedor_id]);
+    await c.query(`insert into ocupaciones(user_id, geo, origen) select $1, geo, 'comprada' from plazas_activas where id=$2
+                   on conflict (user_id) where activa do update set geo=excluded.geo, origen='comprada', desde=now(), ultimo_aviso_at=null`, [t.comprador_id, t.plaza_id]);
     await c.query("update disputas set estado='rechazada' where transaccion_id=$1 and estado='abierta'", [t.id]);
     await c.query('commit');
     evento('pago_liberado_al_vendedor', { userId: t.vendedor_id, data: { transaccion: t.id, neto: t.monto_cents - t.comision_cents, comision: t.comision_cents } });

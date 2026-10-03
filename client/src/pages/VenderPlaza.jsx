@@ -5,7 +5,7 @@ import { api } from '../services/api.js';
 import { posicionActual } from '../services/geolocation.js';
 
 // Flujo "Vender mi plaza": localiza, deja ajustar el pin, pide el precio y publica. La plaza no caduca.
-export default function VenderPlaza({ onPublicada }) {
+export default function VenderPlaza({ onPublicada, inicio = null }) {
   const aviso = useToast();
   const [pos, setPos] = useState(null);
   const [moverA, setMoverA] = useState(null);
@@ -13,7 +13,8 @@ export default function VenderPlaza({ onPublicada }) {
   const [precio, setPrecio] = useState('1.50');
   const [enviando, setEnviando] = useState(false);
 
-  const aparcado = () => posicionActual().then((p) => { pinRef.current = p; setPos(p); }).catch((e) => aviso(
+  // Si ya sabemos dónde está el coche (plaza ocupada) se parte de ahí; si no, del GPS.
+  const aparcado = () => (inicio ? Promise.resolve(inicio) : posicionActual()).then((p) => { pinRef.current = p; setPos(p); }).catch((e) => aviso(
     e.code === 1
       ? 'Necesitamos tu ubicación. En el iPhone: icono a la izquierda de la dirección en Safari → Ajustes del sitio web → Ubicación → Permitir.'
       : e.code === 3 ? 'Tardó demasiado en localizarte. Prueba en un sitio con mejor cobertura.'

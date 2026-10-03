@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../config/db.js';
 import { env } from '../config/env.js';
+import { avisarMatches } from '../config/match.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const r = Router();
@@ -35,6 +36,7 @@ r.post('/', requireAuth, async (req, res) => {
      values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4)
      returning id, estado`,
     [req.user.id, lat, lng, precio_cents]);
+  avisarMatches(rows[0].id, lat, lng, req.user.id).catch((e) => console.error('match', e.message));   // push a quien busca plaza cerca
   res.status(201).json(rows[0]);
 });
 
@@ -81,6 +83,16 @@ r.get('/mia', requireAuth, async (req, res) => {
        from plazas_activas p where p.seller_id=$1 and p.estado in ('disponible','reservada')
       order by p.created_at desc limit 1`, [req.user.id]);
   res.json({ plaza: rows[0] ?? null });
+});
+
+// Una plaza concreta (para abrir el aviso de un push). Ubicación aproximada, como en la búsqueda.
+r.get('/:id', requireAuth, async (req, res) => {
+  if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ error: 'Id no válido' });
+  const { rows } = await query(
+    `select p.id, p.precio_cents, p.estado, round(ST_Y(p.geo::geometry)::numeric, 3) as lat_aprox, round(ST_X(p.geo::geometry)::numeric, 3) as lng_aprox,
+            u.name as vendedor, u.rating_avg, u.rating_count
+       from plazas_activas p join users u on u.id=p.seller_id where p.id=$1 and p.estado='disponible' and p.seller_id <> $2`, [req.params.id, req.user.id]);
+  rows[0] ? res.json({ plaza: rows[0] }) : res.status(404).json({ error: 'Esa plaza ya no está disponible' });
 });
 
 // Vendedor cancela su plaza (solo si no está reservada).
