@@ -3,7 +3,7 @@ import SelectorCoche from '../components/SelectorCoche.jsx';
 import Mapa from '../components/Mapa.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
-import { posicionActual } from '../services/geolocation.js';
+import { LIMITES_PILOTO, posicionActual } from '../services/geolocation.js';
 
 // Flujo "Vender mi plaza": localiza, deja ajustar el pin, pide el precio y publica. La plaza caduca a los 10 minutos.
 export default function VenderPlaza({ onPublicada, inicio = null }) {
@@ -48,7 +48,7 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
   return (
     <form onSubmit={publicar} className="space-y-3 rounded-xl border bg-white">
       <div className="relative">
-        <Mapa center={pos} centerPin className="h-[42vh] w-full overflow-hidden rounded-t-xl" moverA={moverA}
+        <Mapa center={pos} limites={LIMITES_PILOTO} centerPin className="h-[42vh] w-full overflow-hidden rounded-t-xl" moverA={moverA}
           onCenterChange={(c) => { pinRef.current = { lat: c.lat, lng: c.lng }; }} />
         <p className="pointer-events-none absolute inset-x-3 top-3 rounded-lg bg-white/95 px-3 py-2 text-center text-sm shadow">
           Mueve el mapa para colocar el pin donde está tu coche

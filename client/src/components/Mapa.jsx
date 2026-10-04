@@ -33,15 +33,15 @@ const PinCentral = () => (
  * Mapa interactivo (se puede arrastrar y hacer zoom).
  * - center: posición inicial (el usuario lo mueve libremente después).
  * - centerPin: muestra un pin fijo en el centro; onCenterChange recibe el centro al mover.
- * - markers: [{id, lat, lng, label?, color?}], zonas: GeoJSON de zonas bloqueadas, moverA: {lat,lng} para recentrar.
+ * - markers: [{id, lat, lng, label?, color?}], zonas: GeoJSON de zonas bloqueadas, moverA: {lat,lng} para recentrar, limites: {north,south,east,west} fuera de los cuales no se puede mover el mapa.
  */
-export default function Mapa({ center, markers = [], onMarkerClick, onMapClick, onCenterChange, centerPin = false, zonas, moverA, className = 'h-[60vh] w-full' }) {
+export default function Mapa({ center, markers = [], onMarkerClick, onMapClick, onCenterChange, centerPin = false, zonas, moverA, limites, className = 'h-[60vh] w-full' }) {
   const key = import.meta.env.VITE_GOOGLE_MAPS_KEY;
   if (!key) return <p className="p-4 text-red-600">Falta VITE_GOOGLE_MAPS_KEY en client/.env.local</p>;
   return (
     <div className={`relative ${className}`}>
       <APIProvider apiKey={key}>
-        <Map className="h-full w-full" defaultCenter={center} defaultZoom={17} mapId="DEMO_MAP_ID" gestureHandling="greedy"
+        <Map className="h-full w-full" defaultCenter={center} defaultZoom={17} mapId="DEMO_MAP_ID" gestureHandling="greedy" restriction={limites ? { latLngBounds: limites, strictBounds: true } : undefined}
           streetViewControl={false} mapTypeControl={false} fullscreenControl={false} clickableIcons={false}
           onClick={() => onMapClick?.()}
           onCameraChanged={(ev) => onCenterChange?.(ev.detail.center)}>

@@ -1,6 +1,10 @@
 // Zona piloto: Benalúa, Alicante (calle Aloná y calle García Andreu).
 export const ZONA_PILOTO = { nombre: 'Benalúa', lat: 38.3414, lng: -0.4963 };
 
+// Límites del mapa en la beta: el centro del piloto ± 1,1 km (algo más que la geocerca de 1 km del servidor).
+const M = 1100, DLAT = M / 111320, DLNG = M / (111320 * Math.cos((ZONA_PILOTO.lat * Math.PI) / 180));
+export const LIMITES_PILOTO = { north: ZONA_PILOTO.lat + DLAT, south: ZONA_PILOTO.lat - DLAT, east: ZONA_PILOTO.lng + DLNG, west: ZONA_PILOTO.lng - DLNG };
+
 export const posicionActual = () =>
   new Promise((ok, fail) =>
     navigator.geolocation

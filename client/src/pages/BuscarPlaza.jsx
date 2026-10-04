@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
 import SelectorCoche from '../components/SelectorCoche.jsx';
 import { onMensaje } from '../services/ws.js';
-import { ZONA_PILOTO, distanciaM, posicionActual } from '../services/geolocation.js';
+import { LIMITES_PILOTO, ZONA_PILOTO, distanciaM, posicionActual } from '../services/geolocation.js';
 import { activarPush, estadoPush } from '../services/push.js';
 
 const eur = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
@@ -93,7 +93,7 @@ export default function BuscarPlaza() {
       </div>
 
       <div className="relative">
-        <Mapa center={ZONA_PILOTO} className="h-[calc(100dvh-8.5rem)] min-h-[320px] w-full" zonas={zonas} moverA={moverA}
+        <Mapa center={ZONA_PILOTO} limites={LIMITES_PILOTO} className="h-[calc(100dvh-8.5rem)] min-h-[320px] w-full" zonas={zonas} moverA={moverA}
           markers={[...plazas, ...(sel && !plazas.some((p) => p.id === sel.id) ? [sel] : [])].map((p) => ({ id: p.id, lat: Number(p.lat_aprox), lng: Number(p.lng_aprox), label: String(p.precio_cents / 100), ...p }))}
           onMarkerClick={(m) => setSel([...plazas, ...(sel ? [sel] : [])].find((p) => p.id === m.id))} onMapClick={() => setSel(null)} onCenterChange={alMoverMapa} />
         {!plazas.length && <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit rounded-full bg-white/95 px-4 py-2 text-sm text-gray-600 shadow">No hay plazas disponibles en esta zona ahora mismo</p>}
