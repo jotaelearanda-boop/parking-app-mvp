@@ -34,7 +34,7 @@ export default function App() {
   return (
     <div className="mx-auto max-w-6xl space-y-3 p-4">
       <header className="flex items-center gap-3">
-        <h1 className="text-xl font-bold">Backoffice · Parking P2P</h1>
+        <h1 className="text-xl font-bold">Backoffice · APParK</h1>
         <span className="ml-auto text-sm text-gray-500">{yo.name} · {yo.rol}</span>
         <button className="rounded border px-3 py-1 text-sm" onClick={() => { setToken(null); setYo(null); }}>Salir</button>
       </header>

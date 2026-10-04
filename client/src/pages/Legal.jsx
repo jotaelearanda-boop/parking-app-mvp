@@ -2,7 +2,7 @@
 // y completar los datos entre corchetes del titular. Versión: 2026-10-beta (ver server/src/routes/auth.js).
 const Pagina = ({ titulo, children }) => (
   <main className="mx-auto max-w-2xl space-y-3 p-5 pb-16 leading-relaxed">
-    <a href="/" className="text-sm text-blue-600">← Volver</a>
+    <a href="/" className="text-sm text-brand-600">← Volver</a>
     <h1 className="text-2xl font-bold">{titulo}</h1>
     <p className="rounded bg-yellow-50 p-2 text-sm text-yellow-900">Versión beta 2026-10 (3) · Texto provisional sujeto a revisión legal.</p>
     {children}
@@ -14,7 +14,7 @@ export function Terminos() {
   return (
     <Pagina titulo="Términos de uso">
       <H>1. Qué es esta aplicación</H>
-      <p>Parking P2P es una plataforma que pone en contacto a conductores. Un usuario que va a dejar libre una plaza de aparcamiento en la vía pública puede avisar de ello, y otro usuario puede reservar el aviso a cambio de un precio. La plataforma <b>no vende ni alquila plazas</b>, no es propietaria de ellas ni garantiza que estén libres: solo facilita la comunicación y el pago entre usuarios.</p>
+      <p>APParK es una plataforma que pone en contacto a conductores. Un usuario que va a dejar libre una plaza de aparcamiento en la vía pública puede avisar de ello, y otro usuario puede reservar el aviso a cambio de un precio. La plataforma <b>no vende ni alquila plazas</b>, no es propietaria de ellas ni garantiza que estén libres: solo facilita la comunicación y el pago entre usuarios.</p>
       <H>2. Responsabilidades del usuario</H>
       <ul className="list-disc space-y-1 pl-5">
         <li>Cumplir la normativa de tráfico, de estacionamiento y las ordenanzas municipales. No se pueden ofrecer plazas en zonas reguladas (zona azul, naranja, carga y descarga, vados, reservas, etc.).</li>

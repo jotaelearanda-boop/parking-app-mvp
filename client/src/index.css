@@ -1,3 +1,20 @@
 @import "tailwindcss";
 
+/* Marca APParK: azul noche (tinta) + turquesa. "brand" sustituye al azul por defecto de Tailwind. */
+@theme {
+  --color-brand-50: #eaf6f5;
+  --color-brand-100: #d9f2ef;
+  --color-brand-200: #b3e5e0;
+  --color-brand-300: #6fd0c7;
+  --color-brand-500: #14a89b;
+  --color-brand-600: #0e8277;
+  --color-brand-700: #0b6b62;
+  --color-brand-800: #0a5a52;
+  --color-gray-50: #f4f7f7;
+  --color-gray-900: #14213d;   /* azul noche: texto principal y botones oscuros */
+}
+
 @keyframes slideUp { from { transform: translateY(100%); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+
+/* Bordes suaves por defecto (Tailwind 4 usa el color del texto). */
+@layer base { *, ::after, ::before { border-color: var(--color-gray-200); } }

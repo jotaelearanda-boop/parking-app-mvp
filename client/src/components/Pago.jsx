@@ -23,7 +23,7 @@ function Formulario({ returnPath }) {
     <form onSubmit={pagar} className="space-y-3 rounded-lg border bg-white p-3">
       <PaymentElement />
       {err && <p className="text-red-600">{err}</p>}
-      <button disabled={!stripe || enviando} className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white disabled:bg-gray-300">
+      <button disabled={!stripe || enviando} className="w-full rounded-lg bg-brand-600 p-3 font-semibold text-white disabled:bg-gray-300">
         {enviando ? 'Procesando…' : 'Pagar'}
       </button>
     </form>

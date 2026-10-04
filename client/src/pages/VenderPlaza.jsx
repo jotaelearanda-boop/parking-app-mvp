@@ -39,7 +39,7 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
 
   if (!pos) return (
     <>
-    <button onClick={aparcado} className="w-full rounded-xl bg-blue-600 p-5 text-lg font-bold text-white">
+    <button onClick={aparcado} className="w-full rounded-xl bg-brand-600 p-5 text-lg font-bold text-white">
       📍 Vender mi plaza
     </button>
     <p className="mt-2 text-xs text-gray-500">Tu plaza estará visible 10 minutos (publícala justo antes de salir); si caduca podrás renovarla con un toque. Usaremos tu ubicación solo para publicarla. Se borra 1 hora después de cerrar la venta.</p>
@@ -62,7 +62,7 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
           <input className="mt-1 w-full rounded border p-2" value={precio} onChange={(e) => setPrecio(e.target.value)} inputMode="decimal" /></label>
         <div className="flex gap-2">
           <button type="button" onClick={() => setPos(null)} className="flex-1 rounded-lg border p-3">Cancelar</button>
-          <button disabled={enviando} className="flex-[2] rounded-lg bg-blue-600 p-3 font-semibold text-white disabled:bg-gray-300">Publicar plaza</button>
+          <button disabled={enviando} className="flex-[2] rounded-lg bg-brand-600 p-3 font-semibold text-white disabled:bg-gray-300">Publicar plaza</button>
         </div>
       </div>
     </form>

@@ -91,11 +91,11 @@ export default function Transaccion({ user }) {
 
   if (!tx) return <p className="p-4">{err || 'Cargando…'}</p>;
   const soyVendedor = tx.vendedor_id === user.id;
-  const btn = 'w-full rounded-lg bg-blue-600 p-3 font-semibold text-white';
+  const btn = 'w-full rounded-lg bg-brand-600 p-3 font-semibold text-white';
   return (
     <div className="space-y-3 p-4">
       <h1 className="text-xl font-bold">{soyVendedor ? 'Tu venta' : 'Tu compra'} · {(tx.monto_cents / 100).toFixed(2).replace('.', ',')} €</h1>
-      <p className="rounded bg-blue-50 p-2">Estado: <b>{ESTADOS[tx.estado] ?? tx.estado}</b></p>
+      <p className="rounded bg-brand-50 p-2">Estado: <b>{ESTADOS[tx.estado] ?? tx.estado}</b></p>
       {err && <p className="text-red-600">{err}</p>}
 
       {!soyVendedor && tx.estado === 'en_escrow' && tx.lat && !tx.comprador_llego_at && <Llevame id={id} lat={tx.lat} lng={tx.lng} />}
@@ -134,18 +134,18 @@ export default function Transaccion({ user }) {
       <div className="rounded-lg border bg-white p-2">
         <div className="max-h-48 space-y-1 overflow-y-auto">
           {msgs.map((m) => (
-            <p key={m.id} className={`w-fit max-w-[80%] rounded px-2 py-1 ${m.autor_id === user.id ? 'ml-auto bg-blue-100' : 'bg-gray-100'}`}>{m.texto}</p>
+            <p key={m.id} className={`w-fit max-w-[80%] rounded px-2 py-1 ${m.autor_id === user.id ? 'ml-auto bg-brand-100' : 'bg-gray-100'}`}>{m.texto}</p>
           ))}
           <div ref={fin} />
         </div>
         {['pendiente_pago', 'en_escrow'].includes(tx.estado) && (
           <div className="mt-2 flex flex-wrap gap-2">
             {['¡Estoy detrás de ti! 👀', 'Ya llego 🚶', '¿Cuánto te queda? ⏱️'].map((t) => (
-              <button key={t} type="button" onClick={() => rapido(t)} className="rounded-full border bg-blue-50 px-3 py-1.5 text-sm text-blue-800">{t}</button>))}
+              <button key={t} type="button" onClick={() => rapido(t)} className="rounded-full border bg-brand-50 px-3 py-1.5 text-sm text-brand-800">{t}</button>))}
           </div>)}
         <form onSubmit={enviar} className="mt-2 flex gap-2">
           <input className="flex-1 rounded border p-2" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escribe un mensaje" maxLength={500} />
-          <button className="rounded bg-blue-600 px-4 text-white">Enviar</button>
+          <button className="rounded bg-brand-600 px-4 text-white">Enviar</button>
         </form>
       </div>
     </div>

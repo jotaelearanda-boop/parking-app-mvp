@@ -35,6 +35,6 @@ export default function AvisosPush({ soloSiInactivo = false }) {
     <div className={caja}>
       <p className="font-semibold">🔔 Activa los avisos</p>
       <p className="mt-1 text-sm text-gray-600">Te avisamos cuando alguien reserve tu plaza, cuando aparezca una plaza cerca si estás buscando, y te recordamos venderla cuando te vayas. Solo lo importante.</p>
-      <button onClick={activar} className="mt-2 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white">Activar avisos</button>
+      <button onClick={activar} className="mt-2 w-full rounded-lg bg-brand-600 p-3 font-semibold text-white">Activar avisos</button>
     </div>);
 }

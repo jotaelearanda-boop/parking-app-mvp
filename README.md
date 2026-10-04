@@ -1,4 +1,4 @@
-# Parking P2P (MVP)
+# APParK (MVP)
 
 Marketplace P2P para vender/comprar plazas de aparcamiento gratuitas. Zona piloto: Calle Aloná (Alicante).
 

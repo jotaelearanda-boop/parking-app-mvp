@@ -22,11 +22,11 @@ function AceptarPoliticas({ onOk }) {
       <p>Hemos añadido unos términos de uso y una política de privacidad (incluido el uso de tu ubicación). Necesitamos que los aceptes para seguir usando la app.</p>
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={ok} onChange={(e) => setOk(e.target.checked)} />
-        <span>Acepto los <a href="/terminos" target="_blank" rel="noreferrer" className="text-blue-600 underline">Términos de uso</a> y la{' '}
-          <a href="/privacidad" target="_blank" rel="noreferrer" className="text-blue-600 underline">Política de privacidad</a>.</span>
+        <span>Acepto los <a href="/terminos" target="_blank" rel="noreferrer" className="text-brand-600 underline">Términos de uso</a> y la{' '}
+          <a href="/privacidad" target="_blank" rel="noreferrer" className="text-brand-600 underline">Política de privacidad</a>.</span>
       </label>
       {err && <p className="text-red-600">{err}</p>}
-      <button disabled={!ok} className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white disabled:bg-gray-300"
+      <button disabled={!ok} className="w-full rounded-lg bg-brand-600 p-3 font-semibold text-white disabled:bg-gray-300"
         onClick={() => api.consentimiento().then((r) => onOk(r.user)).catch((e) => setErr(e.message))}>Aceptar y continuar</button>
     </div>);
 }
@@ -65,7 +65,7 @@ export default function App() {
   if (location.pathname === '/privacidad') return <Privacidad />;
   if (!user.politicas_ok) return <AceptarPoliticas onOk={setUser} />;
 
-  const tab = ({ isActive }) => `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold ${isActive ? 'text-blue-600' : 'text-gray-500'}`;
+  const tab = ({ isActive }) => `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold ${isActive ? 'text-brand-600' : 'text-gray-500'}`;
   return (
     <div className="mx-auto max-w-xl pb-24">
       <Routes>

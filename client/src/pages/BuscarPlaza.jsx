@@ -85,7 +85,7 @@ export default function BuscarPlaza() {
   return (
     <div>
       <div className="flex items-center gap-2 p-3">
-        <button onClick={alternarBusqueda} className={`min-w-0 flex-1 rounded-full border px-3 py-2 text-sm font-semibold ${busq ? 'border-blue-600 bg-blue-600 text-white' : 'bg-white'}`}>
+        <button onClick={alternarBusqueda} className={`min-w-0 flex-1 rounded-full border px-3 py-2 text-sm font-semibold ${busq ? 'border-brand-600 bg-brand-600 text-white' : 'bg-white'}`}>
           {busq ? '🅿️ Buscando · parar' : '🅿️ Búscame'}
         </button>
         <button onClick={irAMiPos} className="min-w-0 flex-1 rounded-full border bg-white px-3 py-2 text-sm font-semibold">📍 Mi ubicación</button>
@@ -111,11 +111,11 @@ export default function BuscarPlaza() {
           <div className="mt-3 space-y-2">
             <SelectorCoche coches={coches} value={cocheId} onChange={setCocheId} etiqueta="Voy con" />
             {puedeSaldo && (
-              <button disabled={reservando} onClick={() => reservar(true)} className="w-full rounded-xl bg-blue-600 p-3.5 font-semibold text-white disabled:bg-gray-300">
+              <button disabled={reservando} onClick={() => reservar(true)} className="w-full rounded-xl bg-brand-600 p-3.5 font-semibold text-white disabled:bg-gray-300">
                 Pagar con saldo · {eur(sel.precio_cents)} <span className="font-normal opacity-80">(tienes {eur(saldo)})</span>
               </button>)}
             <button disabled={reservando} onClick={() => reservar(false)}
-              className={`w-full rounded-xl p-3.5 font-semibold disabled:opacity-50 ${puedeSaldo ? 'border' : 'bg-blue-600 text-white'}`}>
+              className={`w-full rounded-xl p-3.5 font-semibold disabled:opacity-50 ${puedeSaldo ? 'border' : 'bg-brand-600 text-white'}`}>
               {puedeSaldo ? 'Pagar con tarjeta / Apple Pay' : `Pagar ${eur(sel.precio_cents)} · tarjeta / Apple Pay`}
             </button>
           </div>

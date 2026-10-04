@@ -47,7 +47,7 @@ export default function Mapa({ center, markers = [], onMarkerClick, onMapClick, 
           onCameraChanged={(ev) => onCenterChange?.(ev.detail.center)}>
           {markers.map((m) => (
             <AdvancedMarker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => onMarkerClick?.(m)}>
-              <Pin background={m.color ?? '#2563eb'} glyphColor="#fff" glyph={m.label} />
+              <Pin background={m.color ?? '#0e8277'} glyphColor="#fff" glyph={m.label} />
             </AdvancedMarker>
           ))}
           <Zonas geojson={zonas} />

@@ -28,12 +28,12 @@ export default function Saldo({ user }) {
   if (!d) return <p className="p-4">{msg || 'Cargando…'}</p>;
   return (
     <div className="space-y-3 p-4">
-      <div className="rounded-xl bg-blue-600 p-5 text-white">
+      <div className="rounded-xl bg-brand-600 p-5 text-white">
         <p className="text-sm opacity-80">Saldo (crédito de la app)</p>
         <p className="text-4xl font-bold">{eur(d.saldo_cents)}</p>
       </div>
       <p className="text-sm text-gray-600">Se usa automáticamente al reservar una plaza si te alcanza. Sin comisiones de tarjeta.</p>
-      {msg && <p className="text-blue-700">{msg}</p>}
+      {msg && <p className="text-brand-700">{msg}</p>}
       {secret ? <Pago clientSecret={secret} returnPath="/saldo" /> : (
         <div className="flex gap-2">
           {[1000, 2000, 5000].filter((c) => d.saldo_cents + c <= d.limites.saldo_max).map((c) => (
@@ -52,7 +52,7 @@ export default function Saldo({ user }) {
           <div className="flex gap-2">
             {[['bizum', 'Bizum'], ['iban', 'Transferencia']].map(([v, n]) => (
               <button key={v} type="button" onClick={() => setF({ ...f, metodo: v })}
-                className={`flex-1 rounded-lg border p-2 font-semibold ${f.metodo === v ? 'border-blue-600 bg-blue-50 text-blue-700' : ''}`}>{n}</button>))}
+                className={`flex-1 rounded-lg border p-2 font-semibold ${f.metodo === v ? 'border-brand-600 bg-brand-50 text-brand-700' : ''}`}>{n}</button>))}
           </div>
           {f.metodo === 'bizum' ? (
             <label className="block text-sm">Móvil que recibe el Bizum
@@ -66,7 +66,7 @@ export default function Saldo({ user }) {
           <p className="text-xs text-gray-500">Se retira todo el saldo. Lo pagamos manualmente en 1 a 3 días laborables. Sin comisión.</p>
           <div className="flex gap-2">
             <button type="button" className="flex-1 rounded-lg border p-2" onClick={() => setRetirando(false)}>Cancelar</button>
-            <button className="flex-[2] rounded-lg bg-blue-600 p-2 font-semibold text-white">Solicitar retirada</button>
+            <button className="flex-[2] rounded-lg bg-brand-600 p-2 font-semibold text-white">Solicitar retirada</button>
           </div>
         </form>
       ) : (

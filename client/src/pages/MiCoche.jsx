@@ -58,7 +58,7 @@ export default function MiCoche() {
           <div className="space-y-2 rounded-xl border border-yellow-300 bg-yellow-50 p-4">
             <p className="font-semibold">⏱️ Tu plaza ha caducado</p>
             <p className="text-sm text-gray-700">Nadie la reservó en 10 minutos y ya no se muestra. ¿Sigues ahí?</p>
-            <button onClick={renovar} className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white">Renovar otros 10 min · {eur(caducada.precio_cents)}</button>
+            <button onClick={renovar} className="w-full rounded-lg bg-brand-600 p-3 font-semibold text-white">Renovar otros 10 min · {eur(caducada.precio_cents)}</button>
           </div>)}
         {plaza === null && !ocupa && (
           <div className="space-y-2">
@@ -70,7 +70,7 @@ export default function MiCoche() {
           <div className="space-y-1 rounded-xl border bg-white p-4">
             <p className="text-lg font-bold">{eur(plaza.precio_cents)} · {plaza.estado === 'disponible' ? 'Publicada' : 'Reservada'}</p>
             <p className="text-gray-600">{plaza.estado === 'disponible' ? `Visible ${plaza.expira_at ? `${Math.max(0, Math.floor((new Date(plaza.expira_at) - ahora) / 60000))}:${String(Math.max(0, Math.floor(((new Date(plaza.expira_at) - ahora) % 60000) / 1000))).padStart(2, '0')} más` : ''}. Si nadie la reserva, caducará.` : 'Alguien la ha reservado.'}</p>
-            {plaza.transaccion_id && <NavLink to={`/transaccion/${plaza.transaccion_id}`} className="mt-2 block rounded-lg bg-blue-600 p-3 text-center font-semibold text-white">Ver la reserva</NavLink>}
+            {plaza.transaccion_id && <NavLink to={`/transaccion/${plaza.transaccion_id}`} className="mt-2 block rounded-lg bg-brand-600 p-3 text-center font-semibold text-white">Ver la reserva</NavLink>}
             {plaza.estado === 'disponible' && <button onClick={cancelar} className="mt-2 w-full rounded-lg border p-3">Cancelar plaza</button>}
           </div>
         )}

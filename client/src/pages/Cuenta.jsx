@@ -45,7 +45,7 @@ function Datos({ user, onUser, onCerrar }) {
       {pide && <label className="block text-sm">Contraseña actual (necesaria para cambiar email o contraseña)<input className={input} type="password" value={f.password_actual} onChange={set('password_actual')} required autoComplete="current-password" /></label>}
       <div className="flex gap-2">
         <button type="button" className="flex-1 rounded-lg border p-2" onClick={onCerrar}>Cancelar</button>
-        <button className="flex-[2] rounded-lg bg-blue-600 p-2 font-semibold text-white">Guardar</button>
+        <button className="flex-[2] rounded-lg bg-brand-600 p-2 font-semibold text-white">Guardar</button>
       </div>
     </form>);
 }
@@ -66,7 +66,7 @@ export default function Cuenta({ user, onUser, onGuia, onSalir }) {
             <p className="truncate text-sm text-gray-600">{user.email}</p>
             <p className="text-sm text-gray-600">{user.phone}</p>
           </div>
-          <button onClick={() => setEditando(true)} aria-label="Editar mis datos" title="Editar mis datos" className="shrink-0 rounded-full border p-2 text-blue-600"><IconoAjustes /></button>
+          <button onClick={() => setEditando(true)} aria-label="Editar mis datos" title="Editar mis datos" className="shrink-0 rounded-full border p-2 text-brand-600"><IconoAjustes /></button>
         </div>)}
       <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist">
         <button role="tab" aria-selected={tab === 'historial'} className={pestana('historial')} onClick={() => setTab('historial')}>Historial</button>
