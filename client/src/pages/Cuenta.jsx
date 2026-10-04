@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import AvisosPush from '../components/AvisosPush.jsx';
 import { useToast } from '../components/Toast.jsx';
+import { IconoAjustes } from '../components/Iconos.jsx';
 import { api } from '../services/api.js';
 
 const eur = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
@@ -65,7 +66,7 @@ export default function Cuenta({ user, onUser, onSalir }) {
             <p className="truncate text-sm text-gray-600">{user.email}</p>
             <p className="text-sm text-gray-600">{user.phone}</p>
           </div>
-          <button onClick={() => setEditando(true)} className="rounded-lg border px-3 py-1.5 text-sm font-semibold text-blue-600">Editar</button>
+          <button onClick={() => setEditando(true)} aria-label="Editar mis datos" title="Editar mis datos" className="shrink-0 rounded-full border p-2 text-blue-600"><IconoAjustes /></button>
         </div>)}
       <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist">
         <button role="tab" aria-selected={tab === 'historial'} className={pestana('historial')} onClick={() => setTab('historial')}>Historial</button>
