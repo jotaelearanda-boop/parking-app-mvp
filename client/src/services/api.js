@@ -60,5 +60,7 @@ export const api = {
   salgo: (id) => req(`/transacciones/${id}/salgo`, { method: 'POST' }),
   chat: (id) => req(`/transacciones/${id}/chat`),
   enviarChat: (id, texto) => req(`/transacciones/${id}/chat`, { method: 'POST', body: { texto } }),
+  renovarPlaza: (id) => req(`/plazas/${id}/renovar`, { method: 'POST' }),
+  onboardingVisto: () => req('/auth/onboarding', { method: 'POST' }),
   cancelarPlaza: (id) => req(`/plazas/${id}`, { method: 'DELETE' }),
 };

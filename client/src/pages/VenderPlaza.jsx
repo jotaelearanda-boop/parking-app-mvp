@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast.jsx';
 import { api } from '../services/api.js';
 import { posicionActual } from '../services/geolocation.js';
 
-// Flujo "Vender mi plaza": localiza, deja ajustar el pin, pide el precio y publica. La plaza no caduca.
+// Flujo "Vender mi plaza": localiza, deja ajustar el pin, pide el precio y publica. La plaza caduca a los 10 minutos.
 export default function VenderPlaza({ onPublicada, inicio = null }) {
   const aviso = useToast();
   const [pos, setPos] = useState(null);
@@ -42,7 +42,7 @@ export default function VenderPlaza({ onPublicada, inicio = null }) {
     <button onClick={aparcado} className="w-full rounded-xl bg-blue-600 p-5 text-lg font-bold text-white">
       📍 Vender mi plaza
     </button>
-    <p className="mt-2 text-xs text-gray-500">Tu plaza seguirá publicada hasta que alguien la reserve o la canceles. Usaremos tu ubicación solo para publicarla. Se borra 1 hora después de cerrar la venta.</p>
+    <p className="mt-2 text-xs text-gray-500">Tu plaza estará visible 10 minutos (publícala justo antes de salir); si caduca podrás renovarla con un toque. Usaremos tu ubicación solo para publicarla. Se borra 1 hora después de cerrar la venta.</p>
     </>);
 
   return (

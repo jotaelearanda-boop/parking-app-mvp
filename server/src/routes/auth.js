@@ -169,6 +169,11 @@ r.post('/consentimiento', requireAuth, async (req, res) => {
   res.json({ user: publico(rows[0]) });
 });
 
+r.post('/onboarding', requireAuth, async (req, res) => {
+  const { rows } = await query('update users set onboarding_at = coalesce(onboarding_at, now()) where id=$1 returning *', [req.user.id]);
+  res.json({ user: publico(rows[0]) });
+});
+
 r.get('/yo', requireAuth, (req, res) => res.json({ user: publico(req.user) }));
 
 export default r;

@@ -51,7 +51,7 @@ function Datos({ user, onUser, onCerrar }) {
 }
 
 // Mi cuenta: datos básicos, historial, notificaciones y cierre de sesión (con confirmación).
-export default function Cuenta({ user, onUser, onSalir }) {
+export default function Cuenta({ user, onUser, onGuia, onSalir }) {
   const [editando, setEditando] = useState(false);
   const [tab, setTab] = useState('historial');
   const [confirmando, setConfirmando] = useState(false);
@@ -73,6 +73,7 @@ export default function Cuenta({ user, onUser, onSalir }) {
         <button role="tab" aria-selected={tab === 'notif'} className={pestana('notif')} onClick={() => setTab('notif')}>Notificaciones</button>
       </div>
       {tab === 'historial' ? <Historial /> : <AvisosPush />}
+      <button onClick={onGuia} className="w-full rounded-xl border p-3 font-semibold">📖 Ver la guía de uso</button>
       <button onClick={() => setConfirmando(true)} className="w-full rounded-xl border p-3 font-semibold text-red-600">Cerrar sesión</button>
 
       {confirmando && (

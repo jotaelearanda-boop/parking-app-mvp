@@ -51,8 +51,10 @@ r.post('/reservar/:plazaId', async (req, res) => {
     await client.query('begin');
     // UPDATE condicional: solo uno gana si dos compradores reservan a la vez.
     const { rows } = await client.query(
-      `update plazas_activas set estado='reservada'
-        where id=$1 and estado='disponible' and seller_id <> $2
+      `update plazas_activas set estado='reservada',
+              restante_s = case when expira_at is null then null else greatest(ceil(extract(epoch from (expira_at - now())))::int, 0) end,
+              expira_at = null
+        where id=$1 and estado='disponible' and seller_id <> $2 and (expira_at is null or expira_at > now())
         returning id, seller_id, precio_cents`, [req.params.plazaId, req.user.id]);
     if (!rows[0]) {
       await client.query('rollback');

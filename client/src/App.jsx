@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import Transaccion from './pages/Transaccion.jsx';
 import MiCoche from './pages/MiCoche.jsx';
 import { IconoBuscar, IconoCartera, IconoCoche, IconoCuenta } from './components/Iconos.jsx';
+import Onboarding from './components/Onboarding.jsx';
 import Cuenta from './pages/Cuenta.jsx';
 import Saldo from './pages/Saldo.jsx';
 import Auth from './pages/Auth.jsx';
@@ -35,10 +36,11 @@ export default function App() {
   const [cargando, setCargando] = useState(!!getToken());
   const [aviso, setAviso] = useState(null);
   const nav = useNavigate();
+  const [guia, setGuia] = useState(false);   // guía de bienvenida abierta a mano desde Mi cuenta
   const location = useLocation();
   const TEXTOS = {
     match: '¡Match! 🚘 Hay una plaza cerca. Toca para verla', comprador_interesado: 'Tienes un comprador interesado', plaza_pagada: 'Plaza pagada: ya puedes avisar de tu salida',
-    saldo_recargado: 'Saldo recargado', disputa_abierta: 'El comprador ha reportado un problema', reembolsado: 'Importe reembolsado', aviso_reputacion: 'Aviso: tu valoración media es baja', pago_confirmado: 'Pago confirmado', retirada_pagada: 'Tu retirada ha sido pagada', retirada_rechazada: 'Tu retirada no se pudo pagar: el saldo ha vuelto a tu cuenta', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
+    plaza_caducada: 'Tu plaza ha caducado: renuévala si sigues ahí', saldo_recargado: 'Saldo recargado', disputa_abierta: 'El comprador ha reportado un problema', reembolsado: 'Importe reembolsado', aviso_reputacion: 'Aviso: tu valoración media es baja', pago_confirmado: 'Pago confirmado', retirada_pagada: 'Tu retirada ha sido pagada', retirada_rechazada: 'Tu retirada no se pudo pagar: el saldo ha vuelto a tu cuenta', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
   };
 
   useEffect(() => {
@@ -72,12 +74,15 @@ export default function App() {
         <Route path="/vender" element={<Navigate to="/coche" replace />} />
         <Route path="/mis" element={<Navigate to="/coche" replace />} />
         <Route path="/transaccion/:id" element={<Transaccion user={user} />} />
-        <Route path="/cuenta" element={<Cuenta user={user} onUser={setUser} onSalir={() => { cerrarWs(); setSession(null); setUser(null); nav('/'); }} />} />
+        <Route path="/cuenta" element={<Cuenta user={user} onUser={setUser} onGuia={() => setGuia(true)} onSalir={() => { cerrarWs(); setSession(null); setUser(null); nav('/'); }} />} />
         <Route path="/saldo" element={<Saldo user={user} />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+      {(!user.onboarding_at || guia) && (
+        <Onboarding onCerrar={() => { setGuia(false); if (!user.onboarding_at) api.onboardingVisto().then((r) => setUser(r.user)).catch(() => {}); }}
+          onIrCoche={() => { setGuia(false); nav('/coche'); if (!user.onboarding_at) api.onboardingVisto().then((r) => setUser(r.user)).catch(() => {}); }} />)}
       {aviso && (
-        <button onClick={() => { nav(aviso.plaza_id ? `/?plaza=${aviso.plaza_id}` : `/transaccion/${aviso.transaccion_id}`); setAviso(null); }}
+        <button onClick={() => { nav(aviso.tipo === 'plaza_caducada' ? '/coche' : aviso.plaza_id ? `/?plaza=${aviso.plaza_id}` : `/transaccion/${aviso.transaccion_id}`); setAviso(null); }}
           className="fixed inset-x-4 top-3 z-50 mx-auto max-w-xl rounded-lg bg-gray-900 p-3 text-left text-white shadow-lg">🔔 {aviso.texto}</button>
       )}
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-xl border-t bg-white pb-[env(safe-area-inset-bottom)]">

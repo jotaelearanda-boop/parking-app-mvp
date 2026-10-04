@@ -80,3 +80,8 @@ Marca cada punto antes de invitar a usuarios reales. Todo lo de abajo está pend
 - [ ] Notificaciones push reales (hoy solo avisos en la app abierta por WebSocket).
 - [ ] Verificación real de email y teléfono (hoy no se envía el código).
 - [ ] Probar el límite de 700 m de la geocerca desde la calle.
+
+## Beta: pendientes de producto
+- [ ] Quitar del pop-up de bienvenida (`client/src/components/Onboarding.jsx`) el aviso de pagos de prueba y la tarjeta 4242 al pasar a Stripe live.
+- [ ] Caducidad de plazas: 10 min (`PLAZA_MINUTOS` en Railway). Revisar con datos de la beta si es suficiente.
+- [ ] Más adelante: analizar horarios repetidos de cada usuario (eventos `plaza_publicada`, `plaza_caducada`, `plaza_renovada`) para lanzar un aviso a la hora habitual de salida.

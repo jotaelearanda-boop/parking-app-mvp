@@ -34,6 +34,7 @@ export function textoPush(tipo, d = {}) {
     case 'comprador_interesado': return { titulo: '¡Match! 🚘', cuerpo: 'Alguien ha reservado tu plaza.', url: t, tag: 'reserva' };
     case 'plaza_pagada': return { titulo: 'Plaza pagada ✅', cuerpo: 'Cuando te vayas, pulsa SALGO para cobrar.', url: t, tag: 'pago' };
     case 'comprador_llego': return { titulo: 'Tu comprador ha llegado 👀', cuerpo: 'Ya puedes salir de la plaza.', url: t, tag: 'llego' };
+    case 'plaza_caducada': return { titulo: 'Tu plaza ha caducado ⏱️', cuerpo: '¿Sigues ahí? Pulsa para renovarla otros 10 minutos.', url: '/coche', tag: 'caducada' };
     case 'plaza_lista': return { titulo: '¡Plaza lista! 🅿️', cuerpo: 'El vendedor ya se ha ido. Es tuya.', url: t, tag: 'lista' };
     case 'chat': return { titulo: 'Nuevo mensaje', cuerpo: String(d.mensaje?.texto ?? '').slice(0, 120), url: t, tag: `chat-${d.transaccion_id}` };
     case 'disputa_abierta': return { titulo: 'Problema reportado', cuerpo: 'El comprador ha reportado un problema con la plaza.', url: t, tag: 'disputa' };

@@ -4,6 +4,7 @@ import { query } from '../config/db.js';
 import { env } from '../config/env.js';
 import { avisarMatches } from '../config/match.js';
 import { requireAuth } from '../middleware/auth.js';
+import { evento } from '../config/audit.js';
 
 const r = Router();
 
@@ -36,10 +37,11 @@ r.post('/', requireAuth, async (req, res) => {
     `select 1 from plazas_activas where seller_id=$1 and estado in ('disponible','reservada')`, [req.user.id]);
   if (activa.rowCount) return res.status(409).json({ error: 'Ya tienes una plaza activa' });
   const { rows } = await query(
-    `insert into plazas_activas(seller_id, geo, precio_cents, vehiculo_id)
-     values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, $5)
-     returning id, estado`,
-    [req.user.id, lat, lng, precio_cents, vh[0].id]);
+    `insert into plazas_activas(seller_id, geo, precio_cents, vehiculo_id, expira_at)
+     values ($1, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4, $5, now() + make_interval(mins => $6))
+     returning id, estado, expira_at`,
+    [req.user.id, lat, lng, precio_cents, vh[0].id, env.plazaMinutos]);
+  evento('plaza_publicada', { userId: req.user.id, ip: req.ip, data: { plaza: rows[0].id } });   // base para analizar horarios habituales
   avisarMatches(rows[0].id, lat, lng, req.user.id).catch((e) => console.error('match', e.message));   // push a quien busca plaza cerca
   res.status(201).json(rows[0]);
 });
@@ -66,6 +68,7 @@ r.get('/cerca', requireAuth, async (req, res) => {
         and ST_DWithin(p.geo, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, $3)
         and ($4::int is null or p.precio_cents <= $4)
         and p.seller_id <> $5
+        and (p.expira_at is null or p.expira_at > now())
       order by distancia_m limit 100`,
     [lat, lng, radio, precio_max ?? null, req.user.id]);
   res.json({ plazas: rows });
@@ -81,12 +84,35 @@ r.get('/zonas', requireAuth, async (_q, res) => {
 // Mi plaza activa (para la pantalla "Mi coche"). Es mía, así que se devuelve la ubicación exacta.
 r.get('/mia', requireAuth, async (req, res) => {
   const { rows } = await query(
-    `select p.id, p.estado, p.precio_cents, p.created_at,
+    `select p.id, p.estado, p.precio_cents, p.created_at, p.expira_at,
             ST_Y(p.geo::geometry) as lat, ST_X(p.geo::geometry) as lng,
             (select t.id from transacciones t where t.plaza_id=p.id and t.estado in ('pendiente_pago','en_escrow','disputada') limit 1) as transaccion_id
        from plazas_activas p where p.seller_id=$1 and p.estado in ('disponible','reservada')
       order by p.created_at desc limit 1`, [req.user.id]);
-  res.json({ plaza: rows[0] ?? null });
+  // Si no hay plaza activa pero la última caducó hace poco (su ubicación aún no se ha borrado), se ofrece renovarla.
+  let caducada = null;
+  if (!rows[0]) {
+    caducada = (await query(
+      `select id, precio_cents from plazas_activas where seller_id=$1 and estado='expirada' and geo is not null and cerrada_at > now() - interval '1 hour'
+        order by cerrada_at desc limit 1`, [req.user.id])).rows[0] ?? null;
+  }
+  res.json({ plaza: rows[0] ?? null, caducada });
+});
+
+// Renovar una plaza caducada: se vuelve a publicar en el mismo sitio y precio, otros 10 minutos.
+r.post('/:id/renovar', requireAuth, async (req, res) => {
+  if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ error: 'Id no válido' });
+  const activa = await query(`select 1 from plazas_activas where seller_id=$1 and estado in ('disponible','reservada')`, [req.user.id]);
+  if (activa.rowCount) return res.status(409).json({ error: 'Ya tienes una plaza activa' });
+  const { rows } = await query(
+    `insert into plazas_activas(seller_id, geo, precio_cents, vehiculo_id, expira_at)
+     select seller_id, geo, precio_cents, vehiculo_id, now() + make_interval(mins => $3) from plazas_activas
+      where id=$1 and seller_id=$2 and estado='expirada' and geo is not null and cerrada_at > now() - interval '1 hour'
+     returning id, estado, expira_at, ST_Y(geo::geometry) as lat, ST_X(geo::geometry) as lng`, [req.params.id, req.user.id, env.plazaMinutos]);
+  if (!rows[0]) return res.status(409).json({ error: 'Esa plaza ya no se puede renovar: publícala de nuevo' });
+  evento('plaza_renovada', { userId: req.user.id, ip: req.ip, data: { plaza: rows[0].id } });
+  avisarMatches(rows[0].id, rows[0].lat, rows[0].lng, req.user.id).catch((e) => console.error('match', e.message));
+  res.status(201).json({ id: rows[0].id, estado: rows[0].estado, expira_at: rows[0].expira_at });
 });
 
 // Una plaza concreta (para abrir el aviso de un push). Ubicación aproximada, como en la búsqueda.
@@ -95,7 +121,7 @@ r.get('/:id', requireAuth, async (req, res) => {
   const { rows } = await query(
     `select p.id, p.precio_cents, p.estado, round(ST_Y(p.geo::geometry)::numeric, 3) as lat_aprox, round(ST_X(p.geo::geometry)::numeric, 3) as lng_aprox,
             u.name as vendedor, u.rating_avg, u.rating_count
-       from plazas_activas p join users u on u.id=p.seller_id where p.id=$1 and p.estado='disponible' and p.seller_id <> $2`, [req.params.id, req.user.id]);
+       from plazas_activas p join users u on u.id=p.seller_id where p.id=$1 and p.estado='disponible' and (p.expira_at is null or p.expira_at > now()) and p.seller_id <> $2`, [req.params.id, req.user.id]);
   rows[0] ? res.json({ plaza: rows[0] }) : res.status(404).json({ error: 'Esa plaza ya no está disponible' });
 });
 

@@ -2,6 +2,7 @@
 import { query } from './config/db.js';
 import { reembolsar } from './config/liquidar.js';
 import { evento } from './config/audit.js';
+import { notify } from './ws.js';
 import { enviarPush } from './config/push.js';
 import { push as pushCfg } from './config/env.js';
 
@@ -9,7 +10,18 @@ async function tick() {
   // 1. Reservas sin pagar tras 10 min: se cancelan y la plaza vuelve a estar disponible (si no ha caducado).
   const { rows: viejas } = await query(
     `update transacciones set estado='cancelada' where estado='pendiente_pago' and created_at < now() - interval '10 minutes' returning plaza_id`);
-  for (const v of viejas) await query("update plazas_activas set estado='disponible' where id=$1 and estado='reservada'", [v.plaza_id]);
+  // La plaza recupera el tiempo que le quedaba al reservarla (mínimo 1 min).
+  for (const v of viejas) await query(
+    `update plazas_activas set estado='disponible', expira_at = now() + make_interval(secs => greatest(coalesce(restante_s, 600), 60)), restante_s=null
+      where id=$1 and estado='reservada'`, [v.plaza_id]);
+
+  // 1b. Plazas publicadas que llevan más de 10 min sin reservarse: se cierran y se avisa al vendedor (puede renovarla).
+  const { rows: caducadas } = await query(
+    `update plazas_activas set estado='expirada', cerrada_at=now() where estado='disponible' and expira_at < now() returning id, seller_id`);
+  for (const c of caducadas) {
+    notify(c.seller_id, 'plaza_caducada', { plaza_id: c.id });
+    evento('plaza_caducada', { userId: c.seller_id, data: { plaza: c.id } });
+  }
 
   // 2. Disputas abiertas más de 24 h sin resolver: reembolso automático.
   const { rows: disp } = await query(
