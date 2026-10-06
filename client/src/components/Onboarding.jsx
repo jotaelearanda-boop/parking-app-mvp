@@ -25,7 +25,7 @@ export default function Onboarding({ onCerrar, onIrCoche }) {
   const avisos = async () => {
     const est = await estadoPush().catch(() => 'no-soportado');
     if (est === 'activo') return setMsg('Ya tienes los avisos activados ✅');
-    if (est === 'instalar') return setMsg('En iPhone instala primero la app: Compartir → Añadir a pantalla de inicio. Luego actívalos en Mi cuenta → Notificaciones.');
+    if (est === 'instalar') return setMsg('En iPhone instala primero la app: Compartir → Añadir a pantalla de inicio. Luego actívalos en Mi cuenta → Avisos.');
     if (est !== 'inactivo') return setMsg('Este navegador no permite avisos. Puedes revisarlo luego en Mi cuenta.');
     try { await activarPush(); setMsg('Avisos activados ✅'); } catch (e) { setMsg(e.message); }
   };

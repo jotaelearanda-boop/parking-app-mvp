@@ -40,6 +40,7 @@ export default function App() {
   const location = useLocation();
   const TEXTOS = {
     match: '¡Match! 🚘 Hay una plaza cerca. Toca para verla', comprador_interesado: 'Tienes un comprador interesado', plaza_pagada: 'Plaza pagada: ya puedes avisar de tu salida',
+    sugerencia_respondida: 'Hemos respondido a tu mensaje',
     plaza_caducada: 'Tu plaza ha caducado: renuévala si sigues ahí', saldo_recargado: 'Saldo recargado', disputa_abierta: 'El comprador ha reportado un problema', reembolsado: 'Importe reembolsado', aviso_reputacion: 'Aviso: tu valoración media es baja', pago_confirmado: 'Pago confirmado', retirada_pagada: 'Tu retirada ha sido pagada', retirada_rechazada: 'Tu retirada no se pudo pagar: el saldo ha vuelto a tu cuenta', comprador_llego: 'El comprador ha llegado, puedes salir', plaza_lista: 'Plaza lista para ocupar', chat: 'Nuevo mensaje',
   };
 
@@ -82,7 +83,7 @@ export default function App() {
         <Onboarding onCerrar={() => { setGuia(false); if (!user.onboarding_at) api.onboardingVisto().then((r) => setUser(r.user)).catch(() => {}); }}
           onIrCoche={() => { setGuia(false); nav('/coche'); if (!user.onboarding_at) api.onboardingVisto().then((r) => setUser(r.user)).catch(() => {}); }} />)}
       {aviso && (
-        <button onClick={() => { nav(aviso.tipo === 'plaza_caducada' ? '/coche' : aviso.plaza_id ? `/?plaza=${aviso.plaza_id}` : `/transaccion/${aviso.transaccion_id}`); setAviso(null); }}
+        <button onClick={() => { nav(aviso.tipo === 'sugerencia_respondida' ? '/cuenta?t=sugerencias' : aviso.tipo === 'plaza_caducada' ? '/coche' : aviso.plaza_id ? `/?plaza=${aviso.plaza_id}` : `/transaccion/${aviso.transaccion_id}`); setAviso(null); }}
           className="fixed inset-x-4 top-3 z-50 mx-auto max-w-xl rounded-lg bg-gray-900 p-3 text-left text-white shadow-lg">🔔 {aviso.texto}</button>
       )}
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-xl border-t bg-white pb-[env(safe-area-inset-bottom)]">

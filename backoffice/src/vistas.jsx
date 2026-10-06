@@ -203,6 +203,67 @@ function Zonas() {
     </div>);
 }
 
+// ------------------------------------------------------------------ Sugerencias, errores y mejoras
+const TIPO_SUG = { sugerencia: '💡 Sugerencia', error: '🐞 Error', mejora: '✨ Mejora' };
+const COLOR_SUG = { abierta: 'bg-yellow-100 text-yellow-800', respondida: 'bg-green-100 text-green-800', cerrada: 'bg-gray-100 text-gray-700' };
+function Sugerencias() {
+  const aviso = useToast();
+  const [estado, setEstado] = useState('abierta');
+  const [l, setL] = useState([]);
+  const [det, setDet] = useState(null);
+  const [resp, setResp] = useState('');
+  const cargar = useCallback(() => api.adminSugerencias(estado).then((r) => setL(r.sugerencias)).catch((e) => aviso(e.message, 'error')), [estado, aviso]);
+  useEffect(() => { cargar(); }, [cargar]);
+  const abrir = (id) => api.adminSugerencia(id).then(setDet).catch((e) => aviso(e.message, 'error'));
+  const responder = (e) => {
+    e.preventDefault();
+    api.adminResponderSugerencia(det.sugerencia.id, resp).then(() => { aviso('Respuesta enviada: el usuario recibe un aviso', 'ok'); setResp(''); abrir(det.sugerencia.id); cargar(); }).catch((x) => aviso(x.message, 'error'));
+  };
+  const cerrar = () => api.adminCerrarSugerencia(det.sugerencia.id).then(() => { aviso('Cerrada', 'ok'); abrir(det.sugerencia.id); cargar(); }).catch((x) => aviso(x.message, 'error'));
+
+  if (det) {
+    const s = det.sugerencia;
+    return (
+      <div className="space-y-3">
+        <button className="text-blue-600" onClick={() => { setDet(null); cargar(); }}>← Volver al listado</button>
+        <div className="rounded-xl border bg-white p-4">
+          <div className="flex flex-wrap items-center gap-2"><b>{TIPO_SUG[s.tipo]}</b><Etiqueta color={COLOR_SUG[s.estado]}>{s.estado}</Etiqueta><span className="ml-auto text-sm text-gray-500">{fecha(s.created_at)}</span></div>
+          <p className="mt-1 text-sm text-gray-600">{s.name} · {s.email} · {s.phone}</p>
+          {s.contexto && <p className="text-xs text-gray-400">Pantalla: {s.contexto.pantalla ?? '—'} · {s.contexto.navegador}</p>}
+        </div>
+        <div className="space-y-2">
+          {det.mensajes.map((m) => (
+            <div key={m.id} className={`max-w-[85%] rounded-xl p-3 ${m.autor === 'equipo' ? 'ml-auto bg-blue-50' : 'border bg-white'}`}>
+              <p className="whitespace-pre-wrap text-sm">{m.texto}</p>
+              <p className="mt-1 text-xs text-gray-400">{m.autor === 'equipo' ? `Equipo${m.staff ? ` · ${m.staff}` : ''}` : s.name} · {fecha(m.created_at)}</p>
+            </div>))}
+        </div>
+        {s.estado !== 'cerrada' && (
+          <form onSubmit={responder} className="space-y-2 rounded-xl border bg-white p-3">
+            <textarea className="min-h-24 w-full rounded-lg border p-2" placeholder="Escribe la respuesta (la verá el usuario en su app)" maxLength={2000} required value={resp} onChange={(e) => setResp(e.target.value)} />
+            <div className="flex gap-2">
+              <button className="flex-[2] rounded-lg bg-blue-600 p-2 font-semibold text-white">Responder</button>
+              <button type="button" onClick={cerrar} className="flex-1 rounded-lg border p-2">Cerrar</button>
+            </div>
+          </form>)}
+        <p className="text-xs text-gray-500">Tu consulta y tu respuesta quedan registradas en la auditoría.</p>
+      </div>);
+  }
+  return (
+    <div className="space-y-3">
+      <select className="rounded-lg border p-2" value={estado} onChange={(e) => setEstado(e.target.value)}>
+        <option value="abierta">Abiertas (sin contestar)</option><option value="respondida">Respondidas</option><option value="cerrada">Cerradas</option><option value="">Todas</option>
+      </select>
+      {!l.length && <p className="text-gray-500">No hay mensajes.</p>}
+      {l.map((s) => (
+        <button key={s.id} onClick={() => abrir(s.id)} className="block w-full space-y-1 rounded-xl border bg-white p-3 text-left hover:bg-blue-50">
+          <div className="flex flex-wrap items-center gap-2"><b>{TIPO_SUG[s.tipo]}</b><Etiqueta color={COLOR_SUG[s.estado]}>{s.estado}</Etiqueta><span className="text-xs text-gray-500">{s.mensajes} mensajes</span><span className="ml-auto text-sm text-gray-500">{fecha(s.updated_at)}</span></div>
+          <p className="line-clamp-2 text-sm">{s.texto}</p>
+          <p className="text-xs text-gray-500">{s.name} · {s.email}</p>
+        </button>))}
+    </div>);
+}
+
 // ------------------------------------------------------------------ Retiradas de saldo
 export function Retiradas({ can }) {
   const aviso = useToast();
@@ -317,7 +378,7 @@ export function Equipo({ yo }) {
 
 // ------------------------------------------------------------------ Contenedor
 const TABS = [
-  ['resumen', 'Resumen', Resumen, 'ver'], ['usuarios', 'Usuarios', Usuarios, 'ver'], ['reclamaciones', 'Reclamaciones', Reclamaciones, 'ver'],
+  ['resumen', 'Resumen', Resumen, 'ver'], ['usuarios', 'Usuarios', Usuarios, 'ver'], ['reclamaciones', 'Reclamaciones', Reclamaciones, 'ver'], ['sugerencias', 'Sugerencias', Sugerencias, 'sugerencias'],
   ['transacciones', 'Transacciones', Transacciones, 'ver'], ['retiradas', 'Retiradas', Retiradas, 'retiradas'], ['zonas', 'Zonas', Zonas, 'zonas'],
   ['auditoria', 'Auditoría', Auditoria, 'auditoria'], ['eventos', 'Eventos', Eventos, 'auditoria'], ['equipo', 'Equipo', Equipo, 'equipo'],
 ];

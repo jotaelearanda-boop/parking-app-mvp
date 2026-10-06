@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useSearchParams } from 'react-router-dom';
+import Sugerencias from '../components/Sugerencias.jsx';
 import AvisosPush from '../components/AvisosPush.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { IconoAjustes } from '../components/Iconos.jsx';
@@ -53,7 +54,8 @@ function Datos({ user, onUser, onCerrar }) {
 // Mi cuenta: datos básicos, historial, notificaciones y cierre de sesión (con confirmación).
 export default function Cuenta({ user, onUser, onGuia, onSalir }) {
   const [editando, setEditando] = useState(false);
-  const [tab, setTab] = useState('historial');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(params.get('t') === 'sugerencias' ? 'sugerencias' : 'historial');
   const [confirmando, setConfirmando] = useState(false);
   const pestana = (id) => `flex-1 rounded-lg p-2 text-sm font-semibold ${tab === id ? 'bg-white shadow' : 'text-gray-500'}`;
   return (
@@ -70,9 +72,10 @@ export default function Cuenta({ user, onUser, onGuia, onSalir }) {
         </div>)}
       <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist">
         <button role="tab" aria-selected={tab === 'historial'} className={pestana('historial')} onClick={() => setTab('historial')}>Historial</button>
-        <button role="tab" aria-selected={tab === 'notif'} className={pestana('notif')} onClick={() => setTab('notif')}>Notificaciones</button>
+        <button role="tab" aria-selected={tab === 'notif'} className={pestana('notif')} onClick={() => setTab('notif')}>Avisos</button>
+        <button role="tab" aria-selected={tab === 'sugerencias'} className={pestana('sugerencias')} onClick={() => setTab('sugerencias')}>Sugerencias</button>
       </div>
-      {tab === 'historial' ? <Historial /> : <AvisosPush />}
+      {tab === 'historial' ? <Historial /> : tab === 'notif' ? <AvisosPush /> : <Sugerencias />}
       <button onClick={onGuia} className="w-full rounded-xl border p-3 font-semibold">📖 Ver la guía de uso</button>
       <button onClick={() => setConfirmando(true)} className="w-full rounded-xl border p-3 font-semibold text-red-600">Cerrar sesión</button>
 

@@ -196,6 +196,49 @@ r.delete('/zonas/:id', permiso('zonas'), async (req, res) => {
 });
 
 // ---------- Retiradas de saldo (solo superadmin) ----------
+// ---- Sugerencias, errores y mejoras de los usuarios ----
+r.get('/sugerencias', permiso('sugerencias'), async (req, res) => {
+  const estado = ['abierta', 'respondida', 'cerrada'].includes(req.query.estado) ? req.query.estado : null;
+  const { rows } = await query(
+    `select s.id, s.tipo, s.estado, s.created_at, s.updated_at, u.name, u.email,
+            (select texto from sugerencias_mensajes m where m.sugerencia_id=s.id order by id limit 1) as texto,
+            (select count(*)::int from sugerencias_mensajes m where m.sugerencia_id=s.id) as mensajes
+       from sugerencias s join users u on u.id=s.user_id
+      where ($1::text is null or s.estado=$1) order by (s.estado='abierta') desc, s.updated_at desc limit 200`, [estado]);
+  res.json({ sugerencias: rows });
+});
+
+r.get('/sugerencias/:id', permiso('sugerencias'), async (req, res) => {
+  if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ error: 'Id no válido' });
+  const { rows } = await query(
+    `select s.id, s.tipo, s.estado, s.contexto, s.created_at, u.id as user_id, u.name, u.email, u.phone
+       from sugerencias s join users u on u.id=s.user_id where s.id=$1`, [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+  const { rows: m } = await query(
+    `select m.id, m.autor, m.texto, m.created_at, st.name as staff from sugerencias_mensajes m left join users st on st.id=m.staff_id
+      where m.sugerencia_id=$1 order by m.id`, [req.params.id]);
+  await log(req.user.id, 'ver_sugerencia', 'sugerencia', req.params.id);
+  res.json({ sugerencia: rows[0], mensajes: m });
+});
+
+r.post('/sugerencias/:id/responder', permiso('sugerencias'), async (req, res) => {
+  const p = z.object({ texto: z.string().trim().min(2).max(2000) }).safeParse(req.body);
+  if (!p.success) return res.status(400).json({ error: 'Escribe la respuesta (máx. 2.000 caracteres)' });
+  const { rows } = await query("update sugerencias set estado='respondida', updated_at=now() where id=$1 returning user_id", [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+  await query("insert into sugerencias_mensajes(sugerencia_id, autor, staff_id, texto) values ($1,'equipo',$2,$3)", [req.params.id, req.user.id, p.data.texto]);
+  notify(rows[0].user_id, 'sugerencia_respondida', { sugerencia_id: req.params.id });
+  await log(req.user.id, 'responder_sugerencia', 'sugerencia', req.params.id);
+  res.json({ ok: true });
+});
+
+r.post('/sugerencias/:id/cerrar', permiso('sugerencias'), async (req, res) => {
+  const { rowCount } = await query("update sugerencias set estado='cerrada', updated_at=now() where id=$1", [req.params.id]);
+  if (!rowCount) return res.status(404).json({ error: 'No encontrado' });
+  await log(req.user.id, 'cerrar_sugerencia', 'sugerencia', req.params.id);
+  res.json({ ok: true });
+});
+
 r.get('/retiradas', permiso('retiradas'), async (req, res) => {
   const estado = String(req.query.estado ?? 'pendiente');
   const { rows } = await query(

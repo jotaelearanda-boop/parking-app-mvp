@@ -15,6 +15,7 @@ import pushRoutes from './routes/push.js';
 import ocupacionRoutes from './routes/ocupacion.js';
 import busquedaRoutes from './routes/busqueda.js';
 import vehiculosRoutes from './routes/vehiculos.js';
+import sugerenciasRoutes from './routes/sugerencias.js';
 import plazasRoutes from './routes/plazas.js';
 
 export const app = express();
@@ -35,6 +36,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/ocupacion', ocupacionRoutes);
 app.use('/api/busqueda', busquedaRoutes);
 app.use('/api/vehiculos', vehiculosRoutes);
+app.use('/api/sugerencias', sugerenciasRoutes);
 app.use('/api/transacciones', transaccionesRoutes);
 
 app.use((err, _q, res, _n) => {
